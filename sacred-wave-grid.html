@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sacred Ratio Wave Grid</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: radial-gradient(circle at center, #101822 0%, #050814 55%, #020208 100%); }
+    canvas { display: block; width: 100vw; height: 100vh; }
+  </style>
+</head>
+<body>
+  <canvas id="canvas"></canvas>
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const phi = (1 + Math.sqrt(5)) / 2;
+
+    function resize() {
+      canvas.width = window.innerWidth * devicePixelRatio;
+      canvas.height = window.innerHeight * devicePixelRatio;
+      ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+    }
+
+    window.addEventListener('resize', resize);
+    resize();
+
+    function goldenStops(size) {
+      const stops = [0, size];
+      let segment = size;
+      while (segment > 32 && stops.length < 18) {
+        segment /= phi;
+        const next = stops[stops.length - 1] - segment;
+        if (next > 0) stops.push(next);
+      }
+      return Array.from(new Set(stops.concat(stops.map(v => size - v)))).sort((a, b) => a - b);
+    }
+
+    function animate(time) {
+      const t = time * 0.0009;
+      const width = canvas.width / devicePixelRatio;
+      const height = canvas.height / devicePixelRatio;
+      const xStops = goldenStops(width);
+      const yStops = goldenStops(height);
+
+      ctx.clearRect(0, 0, width, height);
+      const gradient = ctx.createRadialGradient(width * 0.52, height * 0.45, width * 0.08, width * 0.5, height * 0.5, width * 0.9);
+      gradient.addColorStop(0, 'rgba(64, 168, 255, 0.18)');
+      gradient.addColorStop(0.6, 'rgba(12, 24, 48, 0.16)');
+      gradient.addColorStop(1, 'rgba(2, 8, 16, 0.95)');
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, width, height);
+
+      ctx.strokeStyle = 'rgba(117, 210, 255, 0.32)';
+      ctx.lineWidth = 1.1;
+      ctx.shadowColor = 'rgba(90, 220, 255, 0.18)';
+      ctx.shadowBlur = 12;
+
+      xStops.forEach((x, index) => {
+        const wave = Math.sin(t * 1.1 + index * 0.5) * 18 * Math.sin((x / width) * Math.PI);
+        ctx.beginPath();
+        ctx.moveTo(x + wave, 0);
+        ctx.lineTo(x - wave, height);
+        ctx.stroke();
+      });
+
+      yStops.forEach((y, index) => {
+        const wave = Math.cos(t * 1.2 + index * 0.4) * 18 * Math.sin((y / height) * Math.PI);
+        ctx.beginPath();
+        ctx.moveTo(0, y + wave);
+        ctx.lineTo(width, y - wave);
+        ctx.stroke();
+      });
+
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = 'rgba(255, 243, 214, 0.24)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      const inset = Math.min(width, height) * 0.18;
+      ctx.rect(inset, inset, width - inset * 2, height - inset * 2);
+      ctx.stroke();
+
+      requestAnimationFrame(animate);
+    }
+
+    requestAnimationFrame(animate);
+  </script>
+</body>
+</html>
