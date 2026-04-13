@@ -51,6 +51,7 @@ This folder contains a small collection of HTML pages intended for use as OBS br
 2. In OBS, add a new Browser Source and point it to the local HTML file path.
 3. Set the source resolution to your target canvas size (for example, `1920x1080`).
 4. Append query parameters to customize speed, colors, title text, and other visual options.
+5. All rights are reserved for these files; use is at your own risk and there is no warranty from the author.
 
 ## Notes
 
