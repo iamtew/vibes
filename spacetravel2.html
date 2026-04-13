@@ -1,0 +1,152 @@
+<!--
+  spacetravel2.html: Full-screen starfield zoom with glowing stars on a black background.
+  This page simulates moving through space using a fast canvas starfield and soft neon glow.
+  Optional URL argument: ?speed= to adjust how fast the stars rush past.
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Space Zoom</title>
+  <style>
+    html, body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #000;
+      color: #fff;
+    }
+
+    body {
+      display: flex;
+      align-items: stretch;
+      justify-content: stretch;
+    }
+
+    canvas {
+      display: block;
+      width: 100vw;
+      height: 100vh;
+      image-rendering: pixelated;
+      background: #000;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="canvas"></canvas>
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    let width = 0;
+    let height = 0;
+    const stars = [];
+    const starCount = 180;
+    const speed = parseSpeed();
+
+    function parseSpeed() {
+      const query = new URLSearchParams(window.location.search);
+      const raw = query.get('speed');
+      if (!raw) return 0.5;
+      const value = parseFloat(raw);
+      if (!Number.isFinite(value)) return 0.5;
+      return Math.min(1.2, Math.max(0.1, value));
+    }
+
+    function random(min, max) {
+      return min + Math.random() * (max - min);
+    }
+
+    function createStar() {
+      return {
+        x: random(-1, 1),
+        y: random(-1, 1),
+        z: random(0.2, 1),
+        size: random(0.9, 2.8),
+        hue: random(180, 320),
+        alpha: random(0.45, 0.95),
+      };
+    }
+
+    function resetStar(star) {
+      star.x = random(-1, 1);
+      star.y = random(-1, 1);
+      star.z = 1;
+      star.size = random(0.9, 2.8);
+      star.hue = random(180, 320);
+      star.alpha = random(0.45, 0.95);
+    }
+
+    function resize() {
+      width = window.innerWidth;
+      height = window.innerHeight;
+      canvas.style.width = width + 'px';
+      canvas.style.height = height + 'px';
+      canvas.width = Math.max(140, Math.floor(width * 0.24));
+      canvas.height = Math.max(140, Math.floor(height * 0.24));
+      initStars();
+    }
+
+    function initStars() {
+      stars.length = 0;
+      for (let i = 0; i < starCount; i += 1) {
+        stars.push(createStar());
+      }
+    }
+
+    function draw() {
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.22)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.globalCompositeOperation = 'lighter';
+
+      const centerX = canvas.width * 0.5;
+      const centerY = canvas.height * 0.5;
+      const zoomFactor = Math.max(canvas.width, canvas.height) * 0.6;
+
+      for (const star of stars) {
+        star.z -= speed * 0.007;
+        if (star.z <= 0.02) {
+          resetStar(star);
+        }
+
+        const px = centerX + (star.x / star.z) * zoomFactor;
+        const py = centerY + (star.y / star.z) * zoomFactor;
+        const visible = px >= -40 && px <= canvas.width + 40 && py >= -40 && py <= canvas.height + 40;
+        if (!visible) {
+          if (star.z < 0.4) {
+            resetStar(star);
+          }
+          continue;
+        }
+
+        const radius = Math.max(0.4, star.size * (1 - star.z) * 2.2);
+        const alpha = Math.min(1, star.alpha + (1 - star.z) * 0.6);
+        const hue = (star.hue + performance.now() * 0.005) % 360;
+        const glowColor = `hsla(${hue}, 100%, 80%, ${alpha * 0.35})`;
+        const dotColor = `hsla(${hue}, 92%, 95%, ${alpha})`;
+
+        ctx.save();
+        ctx.shadowColor = glowColor;
+        ctx.shadowBlur = radius * 10;
+        ctx.fillStyle = dotColor;
+        ctx.beginPath();
+        ctx.arc(px, py, radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      ctx.globalCompositeOperation = 'source-over';
+    }
+
+    function animate() {
+      draw();
+      requestAnimationFrame(animate);
+    }
+
+    window.addEventListener('resize', resize);
+    resize();
+    animate();
+  </script>
+</body>
+</html>
