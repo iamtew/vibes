@@ -7,31 +7,36 @@ This folder contains a small collection of HTML pages intended for use as OBS br
 ### [`index.html`](index.html)
 - A browser-side concierge that previews this README and helps verify the collection without squinting.
 
+### [`404.html`](404.html)
+- A simple error-style page for browser sources that should return nothing or show a minimal fallback.
+
 ### [`clouds.html`](clouds.html)
 - Pixelated vapor blobs drift across an 8-bit sky, giving you weather effects without the meteorologist.
 - Arguments: `?speed=0-10`, `?info=1`
 
-### [`empty.html`](empty.html)
-- The perfectly blank OBS source. Use it for testing, layering, or when you want empty space to feel intentional.
+### [`field.html`](field.html)
+- A geometric field effect with animated lines and soft motion, good for subtle ambient backgrounds.
 
-### [`matrix.html`](matrix.html)
-- Chromatic code rain with a soft glow, ideal for whenever your stream needs to feel just a little more ominous.
-- Arguments: `?speed=`, `?color=` (hex values like `#64ff64`)
+### [`flower-of-life.html`](flower-of-life.html)
+- A full-screen Flower of Life sacred-geometry animation with slow rotation and glowing circle intersections.
+
+### [`isogrid.html`](isogrid.html)
+- An isometric ripple grid that feels like Douglas Adams designed geometry after tea.
+- Arguments: `?color=#rrggbb` or `?color=rrggbb`, `?tileSize=` (16-256)
+
+### [`liner.html`](liner.html)
+- Clean linear waveforms and animated stroke lines, useful for elegant animated overlays.
 
 ### [`lines.html`](lines.html)
 - Full-screen terminal neon particles streaking across the screen, all motion and ambient glow.
 - No URL arguments supported yet.
 
+### [`matrix.html`](matrix.html)
+- Chromatic code rain with a soft glow, ideal for whenever your stream needs to feel just a little more ominous.
+- Arguments: `?speed=`, `?color=` (hex values like `#64ff64`)
+
 ### [`pixel.html`](pixel.html)
 - Pixel-art “Starting Soon” board with an animated grid and just enough retro swagger.
-
-### [`spacetravel2.html`](spacetravel2.html)
-- Full-screen starfield zoom through space with glowing moving stars.
-- Arguments: `?speed=` (recommended range `0.1` to `1.2`)
-
-### [`isogrid.html`](isogrid.html)
-- An isometric ripple grid that feels like Douglas Adams designed geometry after tea.
-- Arguments: `?color=#rrggbb` or `?color=rrggbb`, `?tileSize=` (16-256)
 
 ### [`retro.html`](retro.html)
 - Retro terminal console with typing animation, perfect for hacker mood lighting and nostalgic UI energy.
@@ -41,9 +46,16 @@ This folder contains a small collection of HTML pages intended for use as OBS br
 - A drifting starfield for people who want to feel like they’re flying through space from the comfort of their desk.
 - Arguments: `?colorSpeed=`, `?pixelated=`, `?dirt=`
 
+### [`spacetravel2.html`](spacetravel2.html)
+- Full-screen starfield zoom through space with glowing moving stars.
+- Arguments: `?speed=` (recommended range `0.1` to `1.2`)
+
 ### [`startingsoon.html`](startingsoon.html)
 - Countdown timer page made for dramatic pauses, suspense, and theatrical “almost ready” vibes.
 - Arguments: `?seconds=`, `?title=`
+
+### [`empty.html`](empty.html)
+- The perfectly blank OBS source. Use it for testing, layering, or when you want empty space to feel intentional.
 
 ## Usage
 
