@@ -9,6 +9,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Chromatic Code Carnival</title>
   <style>
+    /* Visual styling for the matrix code rain and overlay. */
     :root {
       color: #64ff64;
       background: #000;
@@ -62,6 +63,7 @@
   <canvas id="matrix" data-speed="0.5"></canvas>
   <div class="overlay"></div>
   <script>
+    // Matrix animation logic and parameter parsing.
     const canvas = document.getElementById("matrix");
     const ctx = canvas.getContext("2d");
 
