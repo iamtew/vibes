@@ -25,6 +25,10 @@ This folder contains a small collection of HTML pages intended for use as OBS br
 ### [`pixel.html`](pixel.html)
 - Pixel-art “Starting Soon” board with an animated grid and just enough retro swagger.
 
+### [`zoom.html`](zoom.html)
+- Full-screen fractal zoom with gradient palette motion and optional speed control.
+- Arguments: `?speed=` (recommended range `0.001` to `0.008`)
+
 ### [`isogrid.html`](isogrid.html)
 - An isometric ripple grid that feels like Douglas Adams designed geometry after tea.
 - Arguments: `?color=#rrggbb` or `?color=rrggbb`, `?tileSize=` (16-256)
