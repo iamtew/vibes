@@ -1,0 +1,591 @@
+<!--
+  pixel.html: Retro “Starting Soon” page with an animated pixel grid, hero content, and debug overlay.
+  It blends old-school pixel art with modern OBS compatibility, and is meant as a stylish placeholder screen.
+  Original source: github.com/sayheyakanksha/twitch-pixel-bg-overlay
+-->
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Stream Starting Soon</title>
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap");
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        background: #0a0a12;
+        font-family: "Press Start 2P", monospace;
+      }
+
+      /* --- pixel grid canvas --- */
+      canvas#pixels {
+        position: fixed;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        opacity: 0.12;
+        image-rendering: pixelated;
+      }
+
+      /* --- vignette --- */
+      .vignette {
+        position: fixed;
+        inset: 0;
+        background: radial-gradient(
+          ellipse at center,
+          transparent 45%,
+          rgba(6, 6, 14, 0.85) 100%
+        );
+        pointer-events: none;
+      }
+
+      /* --- hero content --- */
+      .hero {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 28px;
+        z-index: 10;
+        transform-origin: center;
+        transform: scale(var(--hero-scale, 1));
+      }
+
+      .debug-overlay {
+        position: fixed;
+        top: 16px;
+        left: 16px;
+        max-width: min(45vw, 340px);
+        padding: 14px 16px;
+        background: rgba(10, 12, 24, 0.96);
+        color: #f8f8ff;
+        font-size: 11px;
+        line-height: 1.6;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        border: 1px solid rgba(167, 139, 250, 0.6);
+        border-radius: 12px;
+        box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+        z-index: 20;
+        pointer-events: none;
+      }
+
+      .debug-overlay h2 {
+        margin: 0 0 10px;
+        font-size: 12px;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+      }
+
+      .debug-overlay ul {
+        padding-left: 18px;
+        margin: 0;
+      }
+
+      .debug-color-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 10px;
+      }
+
+      .debug-color-swatch {
+        display: inline-flex;
+        align-items: center;
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        background: rgba(255, 255, 255, 0.08);
+        padding: 4px 6px;
+        gap: 6px;
+        border-radius: 6px;
+      }
+
+      .debug-color-block {
+        width: 16px;
+        height: 16px;
+        border-radius: 4px;
+        border: 1px solid rgba(255, 255, 255, 0.18);
+      }
+
+      .debug-color-label {
+        font-size: 9px;
+      }
+
+      /* decorative pixel bar */
+      .pixel-bar {
+        display: flex;
+        gap: 6px;
+      }
+      .pixel-bar span {
+        width: 8px;
+        height: 8px;
+        background: #c084fc;
+        opacity: 0.5;
+        animation: barPulse 2.4s ease-in-out infinite;
+      }
+      .pixel-bar span:nth-child(2) {
+        animation-delay: 0.15s;
+        background: #a78bfa;
+      }
+      .pixel-bar span:nth-child(3) {
+        animation-delay: 0.3s;
+        background: #818cf8;
+      }
+      .pixel-bar span:nth-child(4) {
+        animation-delay: 0.45s;
+        background: #6366f1;
+      }
+      .pixel-bar span:nth-child(5) {
+        animation-delay: 0.6s;
+        background: #818cf8;
+      }
+      .pixel-bar span:nth-child(6) {
+        animation-delay: 0.75s;
+        background: #a78bfa;
+      }
+      .pixel-bar span:nth-child(7) {
+        animation-delay: 0.9s;
+        background: #c084fc;
+      }
+
+      @keyframes barPulse {
+        0%,
+        100% {
+          opacity: 0.3;
+          transform: scaleY(1);
+        }
+        50% {
+          opacity: 1;
+          transform: scaleY(1.8);
+        }
+      }
+
+      /* main heading */
+      .heading {
+        font-size: 13px;
+        letter-spacing: 6px;
+        text-transform: uppercase;
+        color: #e2e0ff;
+        text-shadow:
+          0 0 6px rgba(167, 139, 250, 0.6),
+          0 0 20px rgba(99, 102, 241, 0.3);
+        animation: textGlow 3s ease-in-out infinite;
+      }
+
+      @keyframes textGlow {
+        0%,
+        100% {
+          text-shadow:
+            0 0 6px rgba(167, 139, 250, 0.4),
+            0 0 20px rgba(99, 102, 241, 0.15);
+        }
+        50% {
+          text-shadow:
+            0 0 10px rgba(167, 139, 250, 0.8),
+            0 0 30px rgba(99, 102, 241, 0.4);
+        }
+      }
+
+      /* sub text */
+      .sub {
+        font-size: 8px;
+        letter-spacing: 3px;
+        color: #7c7a9a;
+        animation: fadeInOut 4s ease-in-out infinite;
+      }
+
+      @keyframes fadeInOut {
+        0%,
+        100% {
+          opacity: 0.4;
+        }
+        50% {
+          opacity: 1;
+        }
+      }
+
+      /* bottom decorative pixel bar */
+      .pixel-bar.bottom span {
+        width: 6px;
+        height: 6px;
+        opacity: 0.3;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="pixels"></canvas>
+    <div class="vignette"></div>
+    <div id="debug-overlay" class="debug-overlay" hidden></div>
+
+    <div class="hero">
+      <div class="pixel-bar">
+        <span></span><span></span><span></span><span></span><span></span
+        ><span></span><span></span>
+      </div>
+      <div id="page-title" class="heading">Starting soon</div>
+      <div id="page-subtitle" class="sub">Sit tight &mdash; getting there!</div>
+      <div class="pixel-bar bottom">
+        <span></span><span></span><span></span><span></span><span></span
+        ><span></span><span></span>
+      </div>
+    </div>
+
+    <script>
+      (function () {
+        const CANVAS_WIDTH = 96;
+        const CANVAS_HEIGHT = 54;
+        const TIME_SCALE = 0.001;
+        const TWINKLE_CHANCE = 0.03;
+        const TWINKLE_SPEED = 1.5;
+        const BASE_BRIGHTNESS = 0.7;
+        const BRIGHTNESS_VARIANCE = 0.3;
+        const PIXEL_ALPHA = 255;
+        const HERO_SCALE_VALUES = [1, 1.5, 2, 3];
+
+        const RAW_DEFAULT_PALETTE = [
+          [16, 14, 28],
+          [24, 20, 46],
+          [34, 28, 64],
+          [44, 36, 78],
+          [28, 24, 52],
+          [20, 18, 38],
+        ];
+
+        const DEFAULT_PALETTE = normalizePalette(RAW_DEFAULT_PALETTE, {
+          minLightness: 0.42,
+          minSaturation: 0.28,
+        });
+
+        const canvas = document.getElementById("pixels");
+        const ctx = canvas && canvas.getContext("2d");
+        const hero = document.querySelector(".hero");
+        const debugOverlay = document.getElementById("debug-overlay");
+
+        let palette = DEFAULT_PALETTE;
+
+        if (!ctx) {
+          return;
+        }
+
+        canvas.width = CANVAS_WIDTH;
+        canvas.height = CANVAS_HEIGHT;
+
+        applyQueryParameters();
+
+        const cells = createCellGrid(CANVAS_WIDTH * CANVAS_HEIGHT);
+        const imageData = ctx.createImageData(CANVAS_WIDTH, CANVAS_HEIGHT);
+        const pixelData = imageData.data;
+
+        requestAnimationFrame(renderFrame);
+        
+        function applyQueryParameters() {
+          const params = new URLSearchParams(window.location.search);
+          const title = params.get("title")?.trim();
+          const subtitle = params.get("subtitle")?.trim();
+          const sizeParam = parseInt(params.get("size"), 10);
+          const sizeIndex = Number.isInteger(sizeParam)
+            ? Math.max(0, Math.min(HERO_SCALE_VALUES.length - 1, sizeParam))
+            : 0;
+          const heroScale = HERO_SCALE_VALUES[sizeIndex];
+          const colorValue = params.get("color")?.trim();
+          const infoEnabled = params.has("info") && !/^(?:false|0|no)$/i.test(params.get("info") || "");
+
+          const titleElement = document.getElementById("page-title");
+          const subtitleElement = document.getElementById("page-subtitle");
+
+          if (title && titleElement) {
+            titleElement.textContent = title;
+          }
+
+          if (subtitle && subtitleElement) {
+            subtitleElement.textContent = subtitle.replace(/-/g, "—");
+          }
+
+          if (hero) {
+            hero.style.setProperty("--hero-scale", heroScale);
+          }
+
+          if (colorValue) {
+            const customPalette = createPaletteFromColor(colorValue);
+            if (customPalette) {
+              palette = customPalette;
+            }
+          }
+
+          applyHeroPalette();
+          renderDebugOverlay(params, infoEnabled, colorValue);
+        }
+
+        function applyHeroPalette() {
+          const titleElement = document.getElementById("page-title");
+          const subtitleElement = document.getElementById("page-subtitle");
+          const heroSpans = document.querySelectorAll(".hero .pixel-bar span");
+          const [lightest, secondLightest] = getLightestPaletteColors(palette);
+
+          if (titleElement && lightest) {
+            titleElement.style.color = rgbToHex(lightest);
+            titleElement.style.textShadow = "0 0 16px rgba(255, 255, 255, 0.28)";
+          }
+
+          if (subtitleElement && secondLightest) {
+            subtitleElement.style.color = rgbToHex(secondLightest);
+            subtitleElement.style.textShadow = "0 0 12px rgba(255, 255, 255, 0.2)";
+          }
+
+          heroSpans.forEach((span, index) => {
+            const color = palette[index % palette.length] || palette[0];
+            span.style.backgroundColor = rgbToHex(color);
+          });
+        }
+
+        function getLightestPaletteColors(paletteColors) {
+          const sorted = paletteColors
+            .map((color) => ({ color, lightness: rgbToHsl(color[0], color[1], color[2]).l }))
+            .sort((a, b) => b.lightness - a.lightness);
+
+          return [sorted[0]?.color, sorted[1]?.color || sorted[0]?.color];
+        }
+
+        function renderDebugOverlay(params, enabled, colorValue) {
+          if (!debugOverlay) {
+            return;
+          }
+
+          if (!enabled) {
+            debugOverlay.hidden = true;
+            return;
+          }
+
+          debugOverlay.hidden = false;
+          debugOverlay.innerHTML = "";
+
+          const title = document.createElement("h2");
+          title.textContent = "Page Info";
+          debugOverlay.appendChild(title);
+
+          const list = document.createElement("ul");
+          for (const [key, value] of params.entries()) {
+            const item = document.createElement("li");
+            item.textContent = `${key}: ${value}`;
+            list.appendChild(item);
+          }
+          debugOverlay.appendChild(list);
+
+          const paletteRow = document.createElement("div");
+          paletteRow.className = "debug-color-row";
+
+          const paletteToShow = palette || DEFAULT_PALETTE;
+          paletteToShow.forEach((rgbColor) => {
+            const hex = rgbToHex(rgbColor);
+            const swatch = document.createElement("div");
+            swatch.className = "debug-color-swatch";
+            const block = document.createElement("span");
+            block.className = "debug-color-block";
+            block.style.backgroundColor = hex;
+            const label = document.createElement("span");
+            label.className = "debug-color-label";
+            label.textContent = hex;
+            swatch.appendChild(block);
+            swatch.appendChild(label);
+            paletteRow.appendChild(swatch);
+          });
+
+          debugOverlay.appendChild(paletteRow);
+        }
+
+        function createCellGrid(cellCount) {
+          const grid = [];
+          for (let index = 0; index < cellCount; index += 1) {
+            grid.push(createCell());
+          }
+          return grid;
+        }
+
+        function createCell() {
+          return {
+            basePaletteIndex: Math.floor(Math.random() * palette.length),
+            phase: Math.random() * Math.PI * 2,
+            speed: 0.3 + Math.random() * 0.7,
+            twinkle: Math.random() < TWINKLE_CHANCE,
+          };
+        }
+
+        function createPaletteFromColor(colorValue) {
+          const rgb = hexToRgb(colorValue);
+          if (!rgb) {
+            return null;
+          }
+
+          const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
+          const baseHue = hsl.h;
+          const saturation = Math.min(1, hsl.s + 0.08);
+          const lightness = clamp(hsl.l, 0.25, 0.72);
+
+          const aboveHue1 = (baseHue + 15) % 360;
+          const aboveHue2 = (baseHue + 30) % 360;
+          const belowHue1 = (baseHue + 345) % 360;
+          const belowHue2 = (baseHue + 330) % 360;
+          const accentHue = (baseHue + 120) % 360;
+
+          const main = hslToRgb(baseHue, saturation, lightness);
+          const above1 = hslToRgb(aboveHue1, saturation, clamp(lightness + 0.04, 0.2, 0.85));
+          const above2 = hslToRgb(aboveHue2, saturation, clamp(lightness + 0.07, 0.2, 0.85));
+          const below1 = hslToRgb(belowHue1, saturation, clamp(lightness - 0.04, 0.18, 0.78));
+          const below2 = hslToRgb(belowHue2, saturation, clamp(lightness - 0.08, 0.18, 0.78));
+          const accent = hslToRgb(accentHue, Math.min(1, saturation + 0.18), clamp(1 - lightness, 0.2, 0.9));
+
+          return [main, above1, above2, below1, below2, accent];
+        }
+
+        function hexToRgb(value) {
+          const normalized = value.trim().replace(/^#/, "");
+          if (!/^[0-9a-fA-F]{3}$|^[0-9a-fA-F]{6}$/.test(normalized)) {
+            return null;
+          }
+
+          const hex = normalized.length === 3
+            ? normalized.split("").map((char) => char + char).join("")
+            : normalized;
+
+          return {
+            r: parseInt(hex.slice(0, 2), 16),
+            g: parseInt(hex.slice(2, 4), 16),
+            b: parseInt(hex.slice(4, 6), 16),
+          };
+        }
+
+        function rgbToHex(color) {
+          const toHex = (value) => value.toString(16).padStart(2, "0");
+          return `#${toHex(color[0])}${toHex(color[1])}${toHex(color[2])}`;
+        }
+
+        function rgbToHsl(r, g, b) {
+          r /= 255;
+          g /= 255;
+          b /= 255;
+
+          const max = Math.max(r, g, b);
+          const min = Math.min(r, g, b);
+          let hue = 0;
+          const delta = max - min;
+          const lightness = (max + min) / 2;
+
+          if (delta !== 0) {
+            if (max === r) {
+              hue = ((g - b) / delta) % 6;
+            } else if (max === g) {
+              hue = (b - r) / delta + 2;
+            } else {
+              hue = (r - g) / delta + 4;
+            }
+          }
+
+          hue = Math.round((hue * 60 + 360) % 360);
+          const saturation = delta === 0 ? 0 : delta / (1 - Math.abs(2 * lightness - 1));
+
+          return { h: hue, s: saturation, l: lightness };
+        }
+
+        function hslToRgb(h, s, l) {
+          const c = (1 - Math.abs(2 * l - 1)) * s;
+          const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
+          const m = l - c / 2;
+          let r = 0;
+          let g = 0;
+          let b = 0;
+
+          if (h >= 0 && h < 60) {
+            r = c; g = x; b = 0;
+          } else if (h >= 60 && h < 120) {
+            r = x; g = c; b = 0;
+          } else if (h >= 120 && h < 180) {
+            r = 0; g = c; b = x;
+          } else if (h >= 180 && h < 240) {
+            r = 0; g = x; b = c;
+          } else if (h >= 240 && h < 300) {
+            r = x; g = 0; b = c;
+          } else {
+            r = c; g = 0; b = x;
+          }
+
+          return [
+            Math.round((r + m) * 255),
+            Math.round((g + m) * 255),
+            Math.round((b + m) * 255),
+          ];
+        }
+
+        function clamp(value, min, max) {
+          return Math.min(Math.max(value, min), max);
+        }
+
+        function normalizePalette(paletteColors, options = {}) {
+          const minLightness = options.minLightness ?? 0.42;
+          const minSaturation = options.minSaturation ?? 0.28;
+
+          return paletteColors.map((color) => {
+            const { h, s, l } = rgbToHsl(color[0], color[1], color[2]);
+            const normalizedLightness = Math.max(l, minLightness);
+            const normalizedSaturation = Math.min(1, Math.max(s, minSaturation));
+            return hslToRgb(h, normalizedSaturation, normalizedLightness);
+          });
+        }
+
+        function readableTextColor(color) {
+          const { h, s, l } = rgbToHsl(color[0], color[1], color[2]);
+          if (l >= 0.55) {
+            return color;
+          }
+
+          const brightL = Math.min(0.96, l + 0.45);
+          const reducedS = Math.max(0.18, s * 0.7);
+          return hslToRgb(h, reducedS, brightL);
+        }
+
+        function renderFrame(timestamp) {
+          const time = timestamp * TIME_SCALE;
+          updatePixels(time);
+          ctx.putImageData(imageData, 0, 0);
+          requestAnimationFrame(renderFrame);
+        }
+
+        function updatePixels(time) {
+          for (let index = 0; index < cells.length; index += 1) {
+            const cell = cells[index];
+            const baseColor = palette[cell.basePaletteIndex];
+            const wave = Math.sin(time * cell.speed + cell.phase) * 0.5 + 0.5;
+            const brightness = BASE_BRIGHTNESS + wave * BRIGHTNESS_VARIANCE;
+
+            let r = Math.floor(baseColor[0] * brightness);
+            let g = Math.floor(baseColor[1] * brightness);
+            let b = Math.floor(baseColor[2] * brightness);
+
+            if (cell.twinkle) {
+              const twinklePhase = Math.sin(time * TWINKLE_SPEED + cell.phase) * 0.5 + 0.5;
+              if (twinklePhase > 0.85) {
+                r = Math.min(255, r + 120);
+                g = Math.min(255, g + 100);
+                b = Math.min(255, b + 160);
+              }
+            }
+
+            const offset = index * 4;
+            pixelData[offset] = r;
+            pixelData[offset + 1] = g;
+            pixelData[offset + 2] = b;
+            pixelData[offset + 3] = PIXEL_ALPHA;
+          }
+        }
+      })();
+    </script>
+  </body>
+</html>

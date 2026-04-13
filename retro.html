@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<!--
+  retro.html: Retro terminal console with animated typing output and classic hacker aesthetic.
+  Use ?color= to change the text tint and ?speed= to adjust the typing tempo.
+-->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="https://fonts.cdnfonts.com/css/source-code-pro">
+<title>Retro Terminal</title>
+<style>
+  * {
+    box-sizing: border-box;
+  }
+  html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    background: var(--background, #081f18);
+    color: var(--text-color, #7fffd4);
+    font-family: "Source Code Pro", Courier, monospace;
+    overflow: hidden;
+  }
+  body {
+    display: flex;
+    align-items: stretch;
+    justify-content: center;
+  }
+  .terminal {
+    width: 100%;
+    height: 100%;
+    padding: 24px;
+    background: radial-gradient(circle at top left, var(--glow, rgba(20, 255, 140, 0.08)), transparent 25%),
+                linear-gradient(180deg, var(--overlay-top, rgba(0, 40, 10, 0.75)), var(--overlay-bottom, rgba(0, 10, 0, 0.95)));
+    border: 6px solid var(--border, #003300);
+    box-shadow: inset 0 0 80px rgba(0,255,146,0.08), 0 0 0 10px rgba(0,0,0,0.75);
+    display: flex;
+    flex-direction: column;
+  }
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 18px;
+  }
+  .header .title {
+    font-size: 1rem;
+    letter-spacing: 0.2em;
+  }
+  .header .bullets {
+    font-size: 0.8rem;
+    color: var(--accent, #339933);
+  }
+  .screen {
+    flex: 1;
+    overflow: hidden;
+    border: 1px solid var(--screen-border, rgba(71, 255, 150, 0.18));
+    background: var(--screen-background, rgba(0, 0, 0, 0.5));
+    padding: 18px;
+    position: relative;
+  }
+  .screen::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(to bottom, rgba(0,0,0,0), rgba(0,0,0,0.22));
+  }
+  .output {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    line-height: 1.45;
+    font-size: 1rem;
+    letter-spacing: 0.04em;
+    color: var(--output-text, #9fffbd);
+    text-shadow: 0 0 8px rgba(255, 255, 255, 0.08), 0 0 18px rgba(255, 255, 255, 0.04);
+  }
+  .cursor {
+    display: inline-block;
+    width: 10px;
+    height: 18px;
+    background: var(--accent, #339933);
+    animation: blink 1s steps(2, start) infinite;
+    vertical-align: bottom;
+  }
+  @keyframes blink {
+    0%, 50% { opacity: 1; }
+    51%, 100% { opacity: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="terminal">
+  <div class="header">
+    <div class="title" id="title">STUPID SYSTEMS - RETRO CONSOLE</div>
+    <div class="bullets" id="status">● INIT ● BOOT ● TRACE</div>
+  </div>
+  <div class="screen">
+    <div id="output" class="output"></div>
+  </div>
+</div>
+<script>
+  function hexToRgb(hex) {
+    const cleaned = hex.replace('#', '');
+    const full = cleaned.length === 3 ? cleaned.split('').map(c => c + c).join('') : cleaned;
+    const int = parseInt(full, 16);
+    return {
+      r: (int >> 16) & 255,
+      g: (int >> 8) & 255,
+      b: int & 255
+    };
+  }
+
+  function rgbToHex({r, g, b}) {
+    const toHex = n => n.toString(16).padStart(2, '0');
+    return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+  }
+
+  function clamp(value, min, max) {
+    return Math.min(max, Math.max(min, value));
+  }
+
+  function adjustColor(hex, ratio) {
+    const rgb = hexToRgb(hex);
+    const factor = 1 + ratio;
+    return rgbToHex({
+      r: clamp(Math.round(rgb.r * factor), 0, 255),
+      g: clamp(Math.round(rgb.g * factor), 0, 255),
+      b: clamp(Math.round(rgb.b * factor), 0, 255)
+    });
+  }
+
+  function colorAlpha(hex, alpha) {
+    const {r, g, b} = hexToRgb(hex);
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  }
+
+  const paletteBases = {
+    'retro-green': '#28e247',
+    'blue': '#66edff',
+    'orange': '#ff8c32',
+    'green': '#00ff00'
+  };
+
+  function buildPalette(base) {
+    const bright = adjustColor(base, 0.12);
+    const dark = adjustColor(base, -0.75);
+    return {
+      background: adjustColor(base, -0.92),
+      textColor: adjustColor(base, 0.04),
+      accent: adjustColor(base, -0.28),
+      border: dark,
+      glow: colorAlpha(base, 0.08),
+      overlayTop: colorAlpha(adjustColor(base, -0.65), 0.72),
+      overlayBottom: colorAlpha(adjustColor(base, -0.92), 0.92),
+      screenBackground: 'rgba(0, 0, 0, 0.5)',
+      screenBorder: colorAlpha(base, 0.18),
+      outputText: bright
+    };
+  }
+
+  const palettes = {
+    'retro-green': buildPalette(paletteBases['retro-green']),
+    'blue': buildPalette(paletteBases['blue']),
+    'orange': buildPalette(paletteBases['orange']),
+    'green': buildPalette(paletteBases['green'])
+  };
+
+  const speeds = {
+    slowest: { charBase: 120, charRange: 80, linePause: 600 },
+    slow: { charBase: 40, charRange: 50, linePause: 250 },
+    normal: { charBase: 28, charRange: 35, linePause: 200 },
+    fast: { charBase: 18, charRange: 22, linePause: 120 },
+    fastest: { charBase: 8, charRange: 10, linePause: 80 }
+  };
+
+  const params = new URLSearchParams(window.location.search);
+  const selectedPalette = params.get('color')?.toLowerCase() || 'retro-green';
+  const selectedSpeed = params.get('speed')?.toLowerCase() || 'normal';
+  const paletteName = palettes[selectedPalette] ? selectedPalette : 'retro-green';
+  const speedName = speeds[selectedSpeed] ? selectedSpeed : 'normal';
+  const palette = palettes[paletteName];
+  const speed = speeds[speedName];
+
+  document.documentElement.style.setProperty('--background', palette.background);
+  document.documentElement.style.setProperty('--text-color', palette.textColor);
+  document.documentElement.style.setProperty('--accent', palette.accent);
+  document.documentElement.style.setProperty('--border', palette.border);
+  document.documentElement.style.setProperty('--glow', palette.glow);
+  document.documentElement.style.setProperty('--overlay-top', palette.overlayTop);
+  document.documentElement.style.setProperty('--overlay-bottom', palette.overlayBottom);
+  document.documentElement.style.setProperty('--screen-border', palette.screenBorder);
+  document.documentElement.style.setProperty('--output-text', palette.outputText);
+
+  document.title = `Retro Terminal — ${paletteName}`;
+  document.getElementById('title').textContent = `STUPID SYSTEMS - ${paletteName.toUpperCase()} TERMINAL`;
+  document.getElementById('status').textContent = `● INIT ● BOOT ● ${speedName.toUpperCase()} SPEED`;
+
+  const output = document.getElementById('output');
+  const lines = [
+    `booting STUPID SYSTEMS [${paletteName}] palette...`,
+    `selected render speed: ${speedName}`,
+    'initializing ANSI console mode...',
+    '',
+    'SYSTEM: ready.',
+    'typing simulation active.',
+    '',
+    'this display is a placeholder until real terminal content is injected.',
+    'use ?color=retro-green|blue|orange|green and ?speed=slowest|slow|normal|fast|fastest',
+    '',
+    '>> ready for next build.'
+  ];
+
+  let lineIndex = 0;
+  let charIndex = 0;
+
+  function appendChar(char) {
+    if (char === '\n') {
+      output.textContent += '\n';
+    } else {
+      output.textContent += char;
+    }
+    output.scrollTop = output.scrollHeight;
+  }
+
+  function typeLine() {
+    const current = lines[lineIndex];
+    if (charIndex < current.length) {
+      appendChar(current.charAt(charIndex));
+      charIndex += 1;
+      setTimeout(typeLine, speed.charBase + Math.random() * speed.charRange);
+    } else {
+      appendChar('\n');
+      lineIndex += 1;
+      charIndex = 0;
+      if (lineIndex < lines.length) {
+        setTimeout(typeLine, speed.linePause);
+      } else {
+        appendChar('\n>> waiting for input...');
+      }
+    }
+  }
+
+  window.addEventListener('load', () => {
+    output.textContent = '';
+    setTimeout(typeLine, 400);
+  });
+</script>
+</body>
+</html>

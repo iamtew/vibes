@@ -1,0 +1,405 @@
+<!--
+  Isogrid HTML shell.
+
+  This file is deliberately minimal around the canvas. The grid is drawn
+  entirely in JavaScript, so the HTML only needs to provide the canvas and
+  space for the script to work its magic.
+
+  The title is cyberpunk-flavored, because the grid is otherwise far too
+  reasonable to be allowed to exist without a little neon drama.
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Neon Iso Nexus — Grid Pulse Protocol</title>
+  <style>
+    /*
+      The CSS is intentionally tiny and should not distract.
+      It simply makes the canvas fill the viewport and removes default page
+      chrome like margins and scrollbars, because this is a full-screen
+      cyber-grid experience.
+    */
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #07121e;
+    }
+
+    body {
+      display: flex;
+    }
+
+    canvas {
+      display: block;
+      width: 100vw;
+      height: 100vh;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="canvas"></canvas>
+  <script>
+    // Isogrid: a place where mathematical precision and accidental poetry collide.
+    //
+    // This page renders an infinite-looking isometric grid and animates ripples
+    // that originate from a visible cell. By default the base ripple is cyan.
+    // You can override the ripple color with a HEX value via the URL,
+    // and optionally override the tile size with ?tileSize=, which must be
+    // a whole number between 16 and 256.
+    // Example: ?color=#00ffff&tileSize=128 or ?color=00ffff&tileSize=128
+    //
+    // The code is written for humans, but machines are allowed to understand it too.
+    // If you are a Vogon, please do not try to edit this unless absolutely necessary.
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+
+    let tileSize = 48;
+    let tileHeight = tileSize * 0.5;
+    let tileHalf = tileSize * 0.5;
+    const lineColor = 'rgba(168, 201, 234, 0.15)';
+    // The ripple palette is derived later from the base color. Think of it as
+    // a small family of colours that are all vaguely related, but enjoy their
+    // own distinctive personalities.
+
+    // Convert a HEX string like #0ff or #00ffff to RGB components.
+    function hexToRgb(hex) {
+      hex = hex.replace('#', '');
+      if (hex.length === 3) {
+        hex = hex.split('').map((char) => char + char).join('');
+      }
+      const int = parseInt(hex, 16);
+      return {
+        r: (int >> 16) & 255,
+        g: (int >> 8) & 255,
+        b: int & 255,
+      };
+    }
+
+    // Convert RGB into HSL, because the grid prefers to think in terms of
+    // hue and lightness rather than raw red-green-blue values.
+    function rgbToHsl(r, g, b) {
+      r /= 255;
+      g /= 255;
+      b /= 255;
+      const max = Math.max(r, g, b);
+      const min = Math.min(r, g, b);
+      let h = 0;
+      let s = 0;
+      const l = (max + min) / 2;
+
+      if (max !== min) {
+        const d = max - min;
+        s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+        switch (max) {
+          case r:
+            h = (g - b) / d + (g < b ? 6 : 0);
+            break;
+          case g:
+            h = (b - r) / d + 2;
+            break;
+          case b:
+            h = (r - g) / d + 4;
+            break;
+        }
+        h *= 60;
+      }
+
+      return {
+        hue: Math.round(h),
+        saturation: Math.round(s * 100),
+        lightness: Math.round(l * 100),
+      };
+    }
+
+    // Given a user-supplied color string, validate it as HEX only.
+    // If it is a valid 3- or 6-digit HEX code, return a normalized HSL object.
+    // Supports both #00ffff and 00ffff forms.
+    // Otherwise return null and fall back to the default cyan base.
+    function parseColor(value) {
+      if (!value) return null;
+      const normalized = value.trim();
+      const hexMatch = normalized.match(/^#?([0-9a-f]{3}|[0-9a-f]{6})$/i);
+      if (!hexMatch) return null;
+      return rgbToHsl(...Object.values(hexToRgb(`#${hexMatch[1]}`)));
+    }
+
+    // Given a user-supplied tile size string, validate it strictly.
+    // Accept only integers between 16 and 256 inclusive.
+    function parseTileSize(value) {
+      if (!value) return null;
+      const normalized = value.trim();
+      const parsed = Number(normalized);
+      if (!Number.isFinite(parsed) || !Number.isInteger(parsed)) return null;
+      if (parsed < 16 || parsed > 256) return null;
+      return parsed;
+    }
+
+    // Create a three-color palette from the chosen base color.
+    // The derived colors stay close to the base hue so the ripples feel like
+    // variations of the same family, while still providing enough contrast
+    // to be visually distinct.
+    function derivePalette(base) {
+      const warmNeighbor = (base.hue + 20) % 360;
+      const coolNeighbor = (base.hue + 340) % 360;
+      return [
+        { hue: base.hue, saturation: base.saturation, lightness: base.lightness },
+        { hue: warmNeighbor, saturation: Math.max(80, base.saturation - 10), lightness: Math.min(90, base.lightness + 8) },
+        { hue: coolNeighbor, saturation: Math.max(80, base.saturation - 12), lightness: Math.max(35, base.lightness - 8) },
+      ];
+    }
+
+    const defaultBase = { hue: 180, saturation: 100, lightness: 60 };
+    const query = new URLSearchParams(window.location.search);
+    const overrideColor = parseColor(query.get('color'));
+    const overrideTileSize = parseTileSize(query.get('tileSize'));
+    if (overrideTileSize !== null) {
+      tileSize = overrideTileSize;
+      tileHeight = tileSize * 0.5;
+      tileHalf = tileSize * 0.5;
+    }
+    const ripplePalette = derivePalette(overrideColor || defaultBase);
+
+    let width = 0;
+    let height = 0;
+    let cells = [];
+    let ripples = [];
+
+    // Convert grid coordinates into isometric world coordinates.
+    // The i/j coordinates are the logical grid position; the returned x/y
+    // place the tile correctly in the canvas space.
+    function project(i, j) {
+      return {
+        x: (i - j) * tileHalf,
+        y: (i + j) * tileHeight,
+      };
+    }
+
+    // Convert screen coordinates back into the nearest grid cell.
+    // This is used for click interaction so ripples originate where the user
+    // actually pointed, not in some philosophical position on the grid.
+    function worldToCell(x, y) {
+      const dx = x - width / 2;
+      const dy = y - height * 0.1;
+      const i = Math.round((dx / tileHalf + dy / tileHeight) / 2);
+      const j = Math.round((dy / tileHeight - dx / tileHalf) / 2);
+      return { i, j };
+    }
+
+    // Build the visible grid as a list of cells. The actual grid extends
+    // beyond the screen, but we only care about what can be rendered.
+    function buildCells() {
+      cells = [];
+      const maxCoord = Math.ceil((width + height) / tileSize) + 4;
+      const minCoord = -maxCoord;
+
+      for (let i = minCoord; i <= maxCoord; i += 1) {
+        for (let j = minCoord; j <= maxCoord; j += 1) {
+          const pos = project(i, j);
+          const x = pos.x + width / 2;
+          const y = pos.y + height * 0.1;
+          cells.push({ i, j, x, y });
+        }
+      }
+    }
+
+    // Create a new ripple from the given cell. Each ripple keeps track of
+    // its origin cell, start time, and which palette color it belongs to.
+    function createRipple(i, j) {
+      ripples.push({
+        i,
+        j,
+        start: performance.now(),
+        paletteIndex: Math.floor(Math.random() * ripplePalette.length),
+      });
+    }
+
+    function isCellVisible(cell) {
+      return (
+        cell.x >= -tileSize &&
+        cell.x <= width + tileSize &&
+        cell.y >= -tileHeight &&
+        cell.y <= height + tileHeight
+      );
+    }
+
+    function triggerRippleAtPointer(event) {
+      const rect = canvas.getBoundingClientRect();
+      const x = event.clientX - rect.left;
+      const y = event.clientY - rect.top;
+      const cell = worldToCell(x, y);
+      createRipple(cell.i, cell.j);
+    }
+
+    // Draw a single isometric diamond cell at the given coordinates.
+    function drawDiamond(x, y, fillStyle) {
+      ctx.beginPath();
+      ctx.moveTo(x, y - tileHeight);
+      ctx.lineTo(x + tileHalf, y);
+      ctx.lineTo(x, y + tileHeight);
+      ctx.lineTo(x - tileHalf, y);
+      ctx.closePath();
+      ctx.fillStyle = fillStyle;
+      ctx.fill();
+    }
+
+    // Draw the grid lines behind the ripples.
+    // The entire grid is drawn as two families of parallel lines.
+    function drawGridLines() {
+      ctx.save();
+      ctx.translate(width / 2, height * 0.1);
+      ctx.lineWidth = 1;
+      ctx.lineCap = 'round';
+      ctx.strokeStyle = lineColor;
+      ctx.globalAlpha = 0.75;
+      ctx.beginPath();
+
+      const maxCoord = Math.ceil((width + height) / tileSize) + 4;
+      const minCoord = -maxCoord;
+
+      for (let i = minCoord; i <= maxCoord; i += 1) {
+        const start = project(i, minCoord);
+        const end = project(i, maxCoord);
+        ctx.moveTo(start.x, start.y);
+        ctx.lineTo(end.x, end.y);
+      }
+      for (let j = minCoord; j <= maxCoord; j += 1) {
+        const start = project(minCoord, j);
+        const end = project(maxCoord, j);
+        ctx.moveTo(start.x, start.y);
+        ctx.lineTo(end.x, end.y);
+      }
+      ctx.stroke();
+
+      ctx.restore();
+      ctx.globalAlpha = 1;
+    }
+
+    // Draw a subtle frame around the viewport, 1rem inside the page edge.
+    function drawFrame() {
+      const inset = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+      const frameWidth = window.innerWidth - inset * 2;
+      const frameHeight = window.innerHeight - inset * 2;
+      if (frameWidth <= 0 || frameHeight <= 0) return;
+
+      ctx.save();
+      ctx.strokeStyle = lineColor;
+      ctx.globalAlpha = 0.9;
+      ctx.lineWidth = 1;
+      ctx.strokeRect(inset, inset, frameWidth, frameHeight);
+      ctx.restore();
+    }
+
+    // Render the active ripples by checking each cell against every
+    // ripple. The strongest matching ripple determines the cell color.
+    function drawCells(now) {
+      const activeRipples = ripples.filter((r) => {
+        const radius = ((now - r.start) / 1000) * 10;
+        return radius < 65;
+      });
+      ripples = activeRipples;
+
+      cells.forEach((cell) => {
+        let brightness = 0;
+        let chosenPalette = ripplePalette[0];
+
+        activeRipples.forEach((ripple) => {
+          const dx = cell.i - ripple.i;
+          const dy = cell.j - ripple.j;
+          const distance = Math.sqrt(dx * dx + dy * dy);
+          const radius = ((now - ripple.start) / 1000) * 10;
+          const waveFade = Math.max(0, 1 - radius / 55);
+          const edge = Math.max(0, 1 - Math.abs(distance - radius) / 1.8);
+          const intensity = edge * waveFade;
+
+          if (intensity > brightness) {
+            brightness = intensity;
+            chosenPalette = ripplePalette[ripple.paletteIndex];
+          }
+        });
+
+        if (brightness > 0.02) {
+          const alpha = Math.min(0.65, brightness * 0.9);
+          const lightness = chosenPalette.lightness + brightness * 18;
+          const color = `hsla(${chosenPalette.hue}, ${chosenPalette.saturation}%, ${lightness}%, ${alpha})`;
+          drawDiamond(cell.x, cell.y, color);
+        }
+      });
+    }
+
+    // Paint the background gradient before anything else. The center is the
+    // original dark blue used earlier, and it fades outward to black.
+    function drawBackground() {
+      const center = '#07121e';
+      const outerRadius = Math.hypot(width, height) * 0.7;
+      const gradient = ctx.createRadialGradient(
+        width / 2,
+        height / 2,
+        0,
+        width / 2,
+        height / 2,
+        outerRadius
+      );
+      gradient.addColorStop(0, center);
+      gradient.addColorStop(1, 'black');
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, width, height);
+    }
+
+    // Main animation loop. It redraws background, ripples, and grid lines
+    // every frame, and then asks the browser politely to do it again.
+    function animate(now) {
+      drawBackground();
+      drawCells(now);
+      drawGridLines();
+      drawFrame();
+      requestAnimationFrame(animate);
+    }
+
+    // Keep the canvas crisp on all screens by resizing it to the device pixel
+    // ratio and rebuilding the visible cell grid.
+    function resizeCanvas() {
+      const dpr = window.devicePixelRatio || 1;
+      width = Math.floor(window.innerWidth * dpr);
+      height = Math.floor(window.innerHeight * dpr);
+      canvas.width = width;
+      canvas.height = height;
+      canvas.style.width = `${window.innerWidth}px`;
+      canvas.style.height = `${window.innerHeight}px`;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      buildCells();
+    }
+
+    // Listen for clicks and window resizes. The grid is created once, then
+    // refreshed whenever the viewport changes or the user requests a new ripple.
+    canvas.addEventListener('pointerdown', triggerRippleAtPointer);
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+    // Start with a ripple that is clearly visible in the current viewport.
+    const centerCell = worldToCell(window.innerWidth / 2, window.innerHeight * 0.1);
+    const initialVisibleCells = cells.filter(isCellVisible);
+    const initialVisible =
+      cells.find((cell) => cell.i === centerCell.i && cell.j === centerCell.j) ||
+      initialVisibleCells.reduce((best, cell) => {
+        const dx = cell.x - width / 2;
+        const dy = cell.y - height * 0.1;
+        const dist = dx * dx + dy * dy;
+        return !best || dist < best.dist ? { cell, dist } : best;
+      }, null)?.cell ||
+      cells[0];
+    createRipple(initialVisible.i, initialVisible.j);
+    // Make the grid feel alive by spawning random ripples every few seconds.
+    setInterval(() => {
+      const visiblePool = cells.filter(isCellVisible);
+      const randomPool = visiblePool.length ? visiblePool : cells;
+      const randomCell = randomPool[Math.floor(Math.random() * randomPool.length)];
+      createRipple(randomCell.i, randomCell.j);
+    }, 2800);
+    requestAnimationFrame(animate);
+  </script>
+</body>
+</html>

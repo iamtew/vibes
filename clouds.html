@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<!--
+  clouds.html: Pixelated sky animation with drifting clouds for OBS backgrounds.
+  Use ?speed=0-10 to slow down or speed up the clouds, and ?info=1 to show helpful on-screen hints.
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pixelated Cloud Animation</title>
+  <style>
+    html, body {
+      margin: 0;
+      min-height: 100%;
+      overflow: hidden;
+      background: #8cd7ff;
+      color: #123;
+      font-family: system-ui, sans-serif;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100%;
+      overflow: hidden;
+      background: #8cd7ff;
+      color: #123;
+      font-family: system-ui, sans-serif;
+    }
+
+    canvas {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(180deg, #9ad7ff 0%, #76c7ff 40%, #5db7ff 100%);
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+    }
+
+    .info {
+      position: fixed;
+      left: 20px;
+      bottom: 20px;
+      max-width: calc(100vw - 40px);
+      padding: 12px 16px;
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.84);
+      backdrop-filter: blur(10px);
+      box-shadow: 0 14px 30px rgba(0, 0, 0, 0.18);
+      font-size: 0.95rem;
+      line-height: 1.45;
+      color: #123;
+      z-index: 10;
+    }
+
+    .info strong {
+      color: #093b64;
+    }
+
+    .hint {
+      margin-top: 0.35rem;
+      opacity: 0.88;
+    }
+
+    @media (max-width: 520px) {
+      .info {
+        left: 12px;
+        bottom: 12px;
+        padding: 10px 12px;
+        font-size: 0.9rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <canvas id="canvas"></canvas>
+  <div id="infoOverlay" class="info">
+    <div><strong>Info overlay</strong></div>
+    <div>Use <strong>?speed=0</strong> to freeze, <strong>?speed=10</strong> for fastest clouds.</div>
+    <div class="hint">Current speed: <span id="speedValue">1</span></div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('canvas');
+    const speedValue = document.getElementById('speedValue');
+    const infoOverlay = document.getElementById('infoOverlay');
+    const ctx = canvas.getContext('2d');
+    ctx.imageSmoothingEnabled = false;
+
+    const params = new URLSearchParams(window.location.search);
+    let speed = Number(params.get('speed'));
+    if (!Number.isFinite(speed)) speed = 0;
+    speed = Math.min(10, Math.max(0, speed));
+    speedValue.textContent = speed;
+
+    const showInfo = params.get('info') === '1';
+    infoOverlay.style.display = showInfo ? 'block' : 'none';
+
+    const pixelScale = 6;
+    const cloudCount = 8;
+    const clouds = [];
+    const palette = {
+      sky: ['#9ad7ff', '#76c7ff', '#5db7ff'],
+      cloud: '#fdfdfd',
+      cloudShade: '#e6f2ff'
+    };
+
+    function createCloud() {
+      const cloudWidth = 30 + Math.random() * 30;
+      const cloudHeight = 10 + Math.random() * 8;
+      const baseY = 8 + Math.random() * 14;
+      const pattern = [];
+      for (let y = 0; y < cloudHeight; y++) {
+        const row = [];
+        for (let x = 0; x < cloudWidth; x++) {
+          const distance = Math.abs(x - cloudWidth * 0.45) / (cloudWidth * 0.5) + Math.abs(y - cloudHeight * 0.45) / (cloudHeight * 0.7);
+          row.push(distance < 1.1 && Math.random() > distance * 0.25);
+        }
+        pattern.push(row);
+      }
+
+      return {
+        x: -cloudWidth * 10 + Math.random() * 600,
+        y: baseY,
+        w: cloudWidth,
+        h: cloudHeight,
+        speed: 0.12 + Math.random() * 0.18,
+        pattern,
+        shadeOffset: Math.floor(Math.random() * 4)
+      };
+    }
+
+    function resizeCanvas() {
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+      canvas.width = Math.ceil(width / pixelScale) * pixelScale;
+      canvas.height = Math.ceil(height / pixelScale) * pixelScale;
+      canvas.style.width = `${width}px`;
+      canvas.style.height = `${height}px`;
+    }
+
+    function drawSky() {
+      const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+      grad.addColorStop(0, palette.sky[0]);
+      grad.addColorStop(0.45, palette.sky[1]);
+      grad.addColorStop(1, palette.sky[2]);
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+
+    function drawGridCloud(cloud) {
+      ctx.fillStyle = palette.cloudShade;
+      for (let y = 0; y < cloud.h; y++) {
+        for (let x = 0; x < cloud.w; x++) {
+          if (!cloud.pattern[y][x]) continue;
+          const px = (cloud.x + x * pixelScale) % canvas.width;
+          const py = cloud.y * pixelScale + y * pixelScale;
+          ctx.fillRect(px + pixelScale * 0.5, py + pixelScale * 0.5, pixelScale, pixelScale);
+        }
+      }
+      ctx.fillStyle = palette.cloud;
+      for (let y = 0; y < cloud.h; y++) {
+        for (let x = 0; x < cloud.w; x++) {
+          if (!cloud.pattern[y][x]) continue;
+          const px = (cloud.x + x * pixelScale) % canvas.width;
+          const py = cloud.y * pixelScale + y * pixelScale;
+          ctx.fillRect(px, py, pixelScale, pixelScale);
+        }
+      }
+    }
+
+    function drawClouds() {
+      clouds.forEach(cloud => {
+        const xMoving = (cloud.x + cloud.w * pixelScale) % (canvas.width + cloud.w * pixelScale);
+        drawGridCloud({ ...cloud, x: xMoving < 0 ? xMoving + canvas.width + cloud.w * pixelScale : xMoving });
+      });
+    }
+
+    function updateClouds() {
+      clouds.forEach(cloud => {
+        cloud.x += cloud.speed * speed;
+        if (cloud.x > canvas.width + cloud.w * pixelScale) {
+          cloud.x = -cloud.w * pixelScale - 40;
+          cloud.y = 8 + Math.random() * 12;
+        }
+      });
+    }
+
+    function drawScene() {
+      drawSky();
+      drawClouds();
+    }
+
+    function animate() {
+      drawScene();
+      if (speed > 0) updateClouds();
+      window.requestAnimationFrame(animate);
+    }
+
+    function init() {
+      for (let i = 0; i < cloudCount; i += 1) {
+        clouds.push(createCloud());
+      }
+      resizeCanvas();
+      window.addEventListener('resize', () => {
+        resizeCanvas();
+        drawScene();
+      });
+      animate();
+    }
+
+    init();
+  </script>
+</body>
+</html>

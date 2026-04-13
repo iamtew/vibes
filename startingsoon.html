@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<!--
+  startingsoon.html: Countdown screen with glitchy matrix-style effects and a bold title display.
+  Customize the behavior with ?seconds= and ?title= to match your stream or event timing.
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Starting soon</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      background: #000;
+      color: #fff;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      min-height: 100%;
+      font-family: "Courier New", Courier, monospace;
+      background: #000;
+      color: #fff;
+      display: grid;
+      place-items: center;
+      padding: 1rem;
+    }
+
+    #container {
+      width: min(100%, 720px);
+      padding: 1.5rem;
+      text-align: center;
+    }
+
+    #title {
+      margin: 0 0 1rem;
+      font-size: clamp(2rem, 5vw, 3rem);
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      line-height: 1.1;
+    }
+
+    #count {
+      margin: 0;
+      font-size: clamp(3rem, 8vw, 5rem);
+      letter-spacing: 0.18em;
+      font-weight: 700;
+    }
+
+    .matrix-scrambled {
+      transition: color 0.08s ease;
+    }
+
+    body.end-black::after {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background: #000;
+      opacity: 1;
+      pointer-events: none;
+      transition: none;
+      z-index: 20;
+    }
+  </style>
+</head>
+<body>
+  <div id="container">
+    <div id="title">Starting soon...</div>
+    <div id="count" role="status" aria-live="polite" aria-atomic="true">00:00.0</div>
+  </div>
+
+  <script>
+    const DEFAULT_SECONDS = 90;
+    const DEFAULT_TITLE = "Starting soon...";
+    const MATRIX_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789あいうえおかきくけこさしすせそたちつてとなにぬねの";
+    const MATRIX_COLORS = ["#7cfffd", "#ff6dff", "#6dff9d", "#ffd56d", "#6dc6ff", "#f1ff6d", "#ff5f5f"];
+    const END_ANIMATION_DURATION = 3000;
+    const GLITCH_INTERVAL = 80;
+    const MATRIX_CHAR_COUNT = MATRIX_CHARS.length;
+    const COLOR_COUNT = MATRIX_COLORS.length;
+
+    const params = new URLSearchParams(window.location.search);
+    const titleEl = document.getElementById("title");
+    const countEl = document.getElementById("count");
+
+    const countdownSeconds = parseCountdownSeconds(params.get("seconds"));
+    const titleText = parseTitle(params.get("title"));
+    const countdownTarget = performance.now() + countdownSeconds * 1000;
+
+    titleEl.textContent = titleText;
+    let state = "running";
+    let endStart = null;
+    let lastGlitchStep = -1;
+
+    function parseCountdownSeconds(value) {
+      const number = Number(value);
+      if (!Number.isFinite(number) || number < 0) {
+        return DEFAULT_SECONDS;
+      }
+      return Math.max(0, Math.floor(number));
+    }
+
+    function parseTitle(value) {
+      if (typeof value !== "string") {
+        return DEFAULT_TITLE;
+      }
+      const trimmed = value.trim();
+      return trimmed.length ? trimmed : DEFAULT_TITLE;
+    }
+
+    function randomMatrixChar() {
+      return MATRIX_CHARS.charAt(Math.floor(Math.random() * MATRIX_CHAR_COUNT));
+    }
+
+    function randomColor() {
+      return MATRIX_COLORS[Math.floor(Math.random() * COLOR_COUNT)];
+    }
+
+    function formatTime(ms) {
+      const totalSeconds = Math.max(0, ms / 1000);
+      const displaySeconds = Math.floor(totalSeconds);
+      const tenths = Math.floor((totalSeconds - displaySeconds) * 10);
+      const mins = Math.floor(displaySeconds / 60);
+      const secs = displaySeconds % 60;
+      return `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}.${tenths}`;
+    }
+
+    function scrambleText(el, sourceText, intensity) {
+      const chars = Array.from(sourceText, (char) => {
+        if (char === " ") {
+          return " ";
+        }
+        return Math.random() < intensity ? randomMatrixChar() : char;
+      });
+      el.textContent = chars.join("");
+      el.style.color = randomColor();
+      el.classList.add("matrix-scrambled");
+    }
+
+    function triggerMatrixEndEffect(now) {
+      if (state === "done") {
+        return;
+      }
+
+      if (endStart === null) {
+        endStart = now;
+        countEl.textContent = "00:00.0";
+      }
+
+      const elapsed = Math.min(now - endStart, END_ANIMATION_DURATION);
+      const progress = elapsed / END_ANIMATION_DURATION;
+      const step = Math.floor(elapsed / GLITCH_INTERVAL);
+
+      if (step !== lastGlitchStep) {
+        const intensity = Math.min(1, progress + 0.1);
+        scrambleText(titleEl, titleText, intensity);
+        scrambleText(countEl, "00:00.0", intensity);
+        lastGlitchStep = step;
+      }
+
+      if (elapsed >= END_ANIMATION_DURATION) {
+        state = "done";
+        document.body.classList.add("end-black");
+      }
+    }
+
+    function updateCountdown(now) {
+      const remaining = countdownTarget - now;
+      if (remaining <= 0) {
+        state = "ending";
+        triggerMatrixEndEffect(now);
+        return;
+      }
+      countEl.textContent = formatTime(remaining);
+    }
+
+    function animate(now) {
+      if (state === "running") {
+        updateCountdown(now);
+      } else if (state === "ending") {
+        triggerMatrixEndEffect(now);
+      }
+
+      if (state !== "done") {
+        requestAnimationFrame(animate);
+      }
+    }
+
+    requestAnimationFrame(animate);
+  </script>
+</body>
+</html>

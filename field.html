@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<!--
+  field.html: Full-screen isometric ripple field designed to feel like an elegant sci-fi grid.
+  Minimal HTML is used here because the canvas and animation are handled entirely in JavaScript.
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Neon Iso Nexus — Grid Pulse Protocol</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #07121e;
+    }
+
+    body {
+      display: flex;
+    }
+
+    canvas {
+      display: block;
+      width: 100vw;
+      height: 100vh;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="canvas"></canvas>
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+
+    const tileSize = 48;
+    const tileHeight = tileSize * 0.5;
+    const tileHalf = tileSize * 0.5;
+    const lineColor = 'rgba(168, 201, 234, 0.15)';
+    const accentLine = 'rgba(232, 246, 255, 0.22)';
+
+    let width = 0;
+    let height = 0;
+    let cells = [];
+    let ripples = [];
+
+    function project(i, j) {
+      return {
+        x: (i - j) * tileHalf,
+        y: (i + j) * tileHeight,
+      };
+    }
+
+    function worldToCell(x, y) {
+      const dx = x - width / 2;
+      const dy = y - height * 0.1;
+      const i = Math.round((dx / tileHalf + dy / tileHeight) / 2);
+      const j = Math.round((dy / tileHeight - dx / tileHalf) / 2);
+      return { i, j };
+    }
+
+    function buildCells() {
+      cells = [];
+      const maxCoord = Math.ceil((width + height) / tileSize) + 4;
+      const minCoord = -maxCoord;
+
+      for (let i = minCoord; i <= maxCoord; i += 1) {
+        for (let j = minCoord; j <= maxCoord; j += 1) {
+          const pos = project(i, j);
+          const x = pos.x + width / 2;
+          const y = pos.y + height * 0.1;
+          cells.push({ i, j, x, y });
+        }
+      }
+    }
+
+    function createRipple(i, j) {
+      ripples.push({
+        i,
+        j,
+        start: performance.now(),
+        hue: 188 + Math.random() * 18,
+        saturation: 88 + Math.random() * 10,
+      });
+    }
+
+    function isCellVisible(cell) {
+      return (
+        cell.x >= -tileSize &&
+        cell.x <= width + tileSize &&
+        cell.y >= -tileHeight &&
+        cell.y <= height + tileHeight
+      );
+    }
+
+    function triggerRippleAtPointer(event) {
+      const rect = canvas.getBoundingClientRect();
+      const x = event.clientX - rect.left;
+      const y = event.clientY - rect.top;
+      const cell = worldToCell(x, y);
+      createRipple(cell.i, cell.j);
+    }
+
+    function drawDiamond(x, y, fillStyle) {
+      ctx.beginPath();
+      ctx.moveTo(x, y - tileHeight);
+      ctx.lineTo(x + tileHalf, y);
+      ctx.lineTo(x, y + tileHeight);
+      ctx.lineTo(x - tileHalf, y);
+      ctx.closePath();
+      ctx.fillStyle = fillStyle;
+      ctx.fill();
+    }
+
+    function drawGridLines() {
+      ctx.save();
+      ctx.translate(width / 2, height * 0.1);
+      ctx.lineWidth = 1;
+      ctx.lineCap = 'round';
+      ctx.strokeStyle = lineColor;
+      ctx.globalAlpha = 0.75;
+      ctx.beginPath();
+
+      const maxCoord = Math.ceil((width + height) / tileSize) + 4;
+      const minCoord = -maxCoord;
+
+      for (let i = minCoord; i <= maxCoord; i += 1) {
+        const start = project(i, minCoord);
+        const end = project(i, maxCoord);
+        ctx.moveTo(start.x, start.y);
+        ctx.lineTo(end.x, end.y);
+      }
+      for (let j = minCoord; j <= maxCoord; j += 1) {
+        const start = project(minCoord, j);
+        const end = project(maxCoord, j);
+        ctx.moveTo(start.x, start.y);
+        ctx.lineTo(end.x, end.y);
+      }
+      ctx.stroke();
+
+      ctx.lineWidth = 1.4;
+      ctx.globalAlpha = 0.45;
+      ctx.strokeStyle = accentLine;
+      ctx.beginPath();
+      const accentStep = 4;
+      for (let i = -accentStep; i <= accentStep; i += 2) {
+        const start = project(i, minCoord);
+        const end = project(i, maxCoord);
+        ctx.moveTo(start.x, start.y);
+        ctx.lineTo(end.x, end.y);
+      }
+      for (let j = -accentStep; j <= accentStep; j += 2) {
+        const start = project(minCoord, j);
+        const end = project(maxCoord, j);
+        ctx.moveTo(start.x, start.y);
+        ctx.lineTo(end.x, end.y);
+      }
+      ctx.stroke();
+      ctx.restore();
+      ctx.globalAlpha = 1;
+    }
+
+    function drawCells(now) {
+      const activeRipples = ripples.filter((r) => {
+        const radius = ((now - r.start) / 1000) * 7;
+        return radius < 80;
+      });
+      ripples = activeRipples;
+
+      cells.forEach((cell) => {
+        let brightness = 0;
+        let hue = 188;
+        let saturation = 90;
+
+        activeRipples.forEach((ripple) => {
+          const dx = cell.i - ripple.i;
+          const dy = cell.j - ripple.j;
+          const distance = Math.sqrt(dx * dx + dy * dy);
+          const radius = ((now - ripple.start) / 1000) * 8;
+          const waveFade = Math.max(0, 1 - radius / 70);
+          const edge = Math.max(0, 1 - Math.abs(distance - radius) / 1.8);
+          const intensity = edge * waveFade;
+
+          if (intensity > brightness) {
+            brightness = intensity;
+            hue = ripple.hue;
+            saturation = ripple.saturation;
+          }
+        });
+
+        if (brightness > 0.02) {
+          const alpha = Math.min(0.65, brightness * 0.9);
+          const lightness = 55 + brightness * 25;
+          const color = `hsla(${hue}, ${saturation}%, ${lightness}%, ${alpha})`;
+          drawDiamond(cell.x, cell.y, color);
+        }
+      });
+    }
+
+    function drawBackground() {
+      const gradient = ctx.createLinearGradient(0, 0, 0, height);
+      gradient.addColorStop(0, '#07121e');
+      gradient.addColorStop(1, '#0f1f35');
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, width, height);
+    }
+
+    function animate(now) {
+      drawBackground();
+      drawCells(now);
+      drawGridLines();
+      requestAnimationFrame(animate);
+    }
+
+    function resizeCanvas() {
+      const dpr = window.devicePixelRatio || 1;
+      width = Math.floor(window.innerWidth * dpr);
+      height = Math.floor(window.innerHeight * dpr);
+      canvas.width = width;
+      canvas.height = height;
+      canvas.style.width = `${window.innerWidth}px`;
+      canvas.style.height = `${window.innerHeight}px`;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      buildCells();
+    }
+
+    canvas.addEventListener('pointerdown', triggerRippleAtPointer);
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+    const centerCell = worldToCell(window.innerWidth / 2, window.innerHeight * 0.1);
+    const initialVisibleCells = cells.filter(isCellVisible);
+    const initialVisible =
+      cells.find((cell) => cell.i === centerCell.i && cell.j === centerCell.j) ||
+      initialVisibleCells.reduce((best, cell) => {
+        const dx = cell.x - width / 2;
+        const dy = cell.y - height * 0.1;
+        const dist = dx * dx + dy * dy;
+        return !best || dist < best.dist ? { cell, dist } : best;
+      }, null)?.cell ||
+      cells[0];
+    createRipple(initialVisible.i, initialVisible.j);
+    setInterval(() => {
+      const visiblePool = cells.filter(isCellVisible);
+      const randomPool = visiblePool.length ? visiblePool : cells;
+      const randomCell = randomPool[Math.floor(Math.random() * randomPool.length)];
+      createRipple(randomCell.i, randomCell.j);
+    }, 2800);
+    requestAnimationFrame(animate);
+  </script>
+</body>
+</html>

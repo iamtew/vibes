@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<!--
+  index.html: Live preview of README.md designed for browser-based verification.
+  It renders the markdown file inside the page so you can preview OBS assets documentation
+  without leaving the folder.
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>README</title>
+  <link rel="stylesheet" href="https://fonts.cdnfonts.com/css/source-code-pro">
+  <style>
+    html, body {
+      margin: 0;
+      min-height: 100vh;
+      background: #04182a;
+      color: #b8f0ff;
+      font-family: "Source Code Pro", monospace;
+      line-height: 1.6;
+    }
+    body {
+      padding: 24px;
+      line-height: 1;
+      font-size: 12pt;
+    }
+    #content {
+      max-width: 960px;
+      margin: 0 auto;
+      border-left: 1px solid rgba(255, 255, 255, 0.07);
+      border-right: 1px solid rgba(255, 255, 255, 0.07);
+      padding: 0 18px;
+    }
+    p {
+      margin: 0 0 1rem 0;
+      color: #c8f7ff;
+    }
+    ul,
+    ol {
+      margin: 0 0 1rem 1.25rem;
+      padding: 0;
+    }
+    li {
+      margin: 0.35rem 0;
+    }
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6 {
+      color: #a6f0ff;
+      margin-top: 1.5rem;
+      margin-bottom: 0.75rem;
+      line-height: 1.2;
+      font-weight: 600;
+      text-shadow: 0 0 6px rgba(138, 212, 255, 0.3);
+    }
+    code {
+      color: #c8ffff;
+      background: rgba(33, 77, 110, 0.9);
+      padding: 0.12rem 0.25rem;
+      border-radius: 4px;
+      border: 1px solid rgba(138, 212, 255, 0.25);
+    }
+    a {
+      color: #86d4ff;
+      text-decoration: none;
+    }
+    a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div id="content"></div>
+  <script>
+    function escapeHtml(text) {
+      return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    function renderMarkdown(markdown) {
+      const lines = markdown.split('\n');
+      const html = [];
+      let listType = null;
+      let paragraph = [];
+
+      function flushParagraph() {
+        if (paragraph.length === 0) return;
+        html.push('<p>' + paragraph.join(' ') + '</p>');
+        paragraph = [];
+      }
+
+      function flushList() {
+        if (!listType) return;
+        html.push(listType === 'ol' ? '</ol>' : '</ul>');
+        listType = null;
+      }
+
+      function formatInline(text) {
+        text = escapeHtml(text);
+        text = text.replace(/`([^`]+)`/g, '<code>$1</code>');
+        text = text.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+        text = text.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+        text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+        return text;
+      }
+
+      for (let line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed) {
+          flushParagraph();
+          flushList();
+          continue;
+        }
+
+        const headingMatch = trimmed.match(/^(#{1,6})\s+(.*)$/);
+        const unorderedMatch = trimmed.match(/^[-*+]\s+(.*)$/);
+        const orderedMatch = trimmed.match(/^\d+[.)]\s+(.*)$/);
+
+        if (headingMatch) {
+          flushParagraph();
+          flushList();
+          const level = headingMatch[1].length;
+          const text = formatInline(headingMatch[2]);
+          html.push('<h' + level + '>' + text + '</h' + level + '>');
+          continue;
+        }
+
+        if (unorderedMatch || orderedMatch) {
+          flushParagraph();
+          const targetType = orderedMatch ? 'ol' : 'ul';
+          if (listType !== targetType) {
+            flushList();
+            html.push(targetType === 'ol' ? '<ol>' : '<ul>');
+            listType = targetType;
+          }
+          html.push('<li>' + formatInline((orderedMatch || unorderedMatch)[1]) + '</li>');
+          continue;
+        }
+
+        paragraph.push(formatInline(trimmed));
+      }
+
+      flushParagraph();
+      flushList();
+      return html.join('\n');
+    }
+
+    function renderText(text) {
+      document.getElementById('content').innerHTML = renderMarkdown(text);
+    }
+
+    function loadFallback() {
+      document.getElementById('content').innerHTML = '<h1>README not found</h1><p>System says: 404, but your markdown is the real missing dependency.</p>';
+    }
+
+    fetch('README.md')
+      .then(response => response.ok ? response.text() : Promise.reject())
+      .then(text => {
+        renderText(text);
+      })
+      .catch(() => {
+        loadFallback();
+      });
+  </script>
+</body>
+</html>

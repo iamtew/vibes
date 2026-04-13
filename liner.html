@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<!--
+  liner.html: Terminal-style particle sweep with glowing dot trails and a retro-green ambiance.
+  This canvas animation uses per-particle color, glow, and motion logic for a polished OBS background.
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Terminal Liner</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      margin: 0;
+      min-height: 100%;
+      overflow: hidden;
+      background: #030806;
+      color: #7cff7c;
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    }
+
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      position: relative;
+    }
+
+    canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .overlay {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background-image:
+        linear-gradient(rgba(0, 255, 80, 0.02) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 255, 80, 0.04) 1px, transparent 1px),
+        radial-gradient(circle at top left, rgba(0, 255, 80, 0.04), transparent 25%),
+        radial-gradient(circle at bottom right, rgba(255, 255, 255, 0.02), transparent 18%);
+      background-size: 100% 24px, 24px 100%, 100% 100%, 100% 100%;
+      opacity: 0.55;
+      mix-blend-mode: screen;
+    }
+
+    .flicker {
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle, rgba(255,255,255,0.12), transparent 40%);
+      opacity: 0.18;
+      animation: glowPulse 7s ease-in-out infinite;
+    }
+
+    @keyframes glowPulse {
+      0%, 100% { opacity: 0.14; }
+      50% { opacity: 0.22; }
+    }
+  </style>
+</head>
+<body>
+  <canvas id="screen"></canvas>
+  <div class="overlay"></div>
+  <div class="flicker"></div>
+  <script>
+    const canvas = document.getElementById('screen');
+    const ctx = canvas.getContext('2d');
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    let width = 0;
+    let height = 0;
+    const particles = [];
+    const particleCount = 64;
+    let nextHue = 120;
+
+    function random(min, max) {
+      return min + Math.random() * (max - min);
+    }
+
+    class Particle {
+      constructor() {
+        this.reset(true);
+      }
+
+      reset(initial = false) {
+        const edge = Math.random();
+        if (edge < 0.5) {
+          this.x = random(-0.1 * width, width * 1.1);
+          this.y = edge < 0.25 ? -20 : height + 20;
+        } else {
+          this.x = edge < 0.75 ? -20 : width + 20;
+          this.y = random(-0.1 * height, height * 1.1);
+        }
+
+        const angle = random(-Math.PI * 0.25, Math.PI * 0.25) + (this.x < width / 2 ? 0 : Math.PI);
+        const baseSpeed = random(1.2, 3.6);
+        this.dirX = Math.cos(angle);
+        this.dirY = Math.sin(angle);
+        this.baseSpeed = baseSpeed;
+        this.size = random(1.2, 2.8);
+        this.alpha = random(0.35, 0.75);
+        this.life = random(140, 260);
+        this.age = initial ? random(0, this.life) : 0;
+        this.prevX = this.x;
+        this.prevY = this.y;
+
+        this.hue = nextHue;
+        nextHue = (nextHue + random(6, 14)) % 360;
+        this.hue += random(-4, 4);
+        this.saturation = random(88, 100);
+      }
+
+      update() {
+        this.prevX = this.x;
+        this.prevY = this.y;
+
+        const dx = this.x - width / 2;
+        const dy = this.y - height / 2;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        const maxDist = Math.sqrt((width / 2) ** 2 + (height / 2) ** 2);
+        const speedFactor = 1 + (1 - Math.min(dist / maxDist, 1)) * 0.9;
+        const currentSpeed = this.baseSpeed * speedFactor;
+
+        this.x += this.dirX * currentSpeed;
+        this.y += this.dirY * currentSpeed;
+        this.age += 1;
+
+        if (this.age > this.life || this.x < -60 || this.x > width + 60 || this.y < -60 || this.y > height + 60) {
+          this.reset();
+        }
+      }
+
+      draw() {
+        const lineAlpha = (this.alpha * 0.95) * (1 - this.age / this.life);
+        const dotAlpha = Math.min(1, this.alpha * 1.2);
+
+        const trailColor = `hsla(${this.hue}, ${this.saturation}%, 60%, ${lineAlpha})`;
+        const glowColor = `hsla(${this.hue}, ${this.saturation}%, 72%, 0.38)`;
+        const dotColor = `hsla(${this.hue}, ${this.saturation}%, 86%, ${dotAlpha})`;
+
+        ctx.save();
+        ctx.strokeStyle = trailColor;
+        ctx.lineWidth = this.size * 1.4;
+        ctx.shadowColor = glowColor;
+        ctx.shadowBlur = 16;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(this.prevX, this.prevY);
+        ctx.lineTo(this.x, this.y);
+        ctx.stroke();
+
+        ctx.fillStyle = dotColor;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.size * 1.6, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+    }
+
+    function resize() {
+      width = window.innerWidth;
+      height = window.innerHeight;
+      canvas.width = width * dpr;
+      canvas.height = height * dpr;
+      canvas.style.width = width + 'px';
+      canvas.style.height = height + 'px';
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+
+    function createParticles() {
+      particles.length = 0;
+      for (let i = 0; i < particleCount; i += 1) {
+        particles.push(new Particle());
+      }
+    }
+
+    function drawFrame() {
+      ctx.fillStyle = 'rgba(0, 5, 6, 0.16)';
+      ctx.fillRect(0, 0, width, height);
+      ctx.globalCompositeOperation = 'lighter';
+
+      for (const particle of particles) {
+        particle.update();
+        particle.draw();
+      }
+
+      ctx.globalCompositeOperation = 'source-over';
+      requestAnimationFrame(drawFrame);
+    }
+
+    window.addEventListener('resize', () => {
+      resize();
+      createParticles();
+    });
+
+    resize();
+    createParticles();
+    requestAnimationFrame(drawFrame);
+  </script>
+</body>
+</html>

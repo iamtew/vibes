@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<!--
+  matrix.html: Chromatic code-rain animation with adjustable speed and color tint.
+  The script renders cascading characters and an ambient glow that feels cinematic and alive.
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chromatic Code Carnival</title>
+  <style>
+    :root {
+      color: #64ff64;
+      background: #000;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: radial-gradient(circle at top, rgba(100, 255, 100, 0.08), transparent 35%),
+        radial-gradient(circle at center, rgba(72, 192, 72, 0.08), transparent 40%),
+        #000;
+      font-family: "Courier New", Courier, monospace;
+    }
+
+    canvas {
+      display: block;
+      width: 100vw;
+      height: 100vh;
+    }
+
+    .overlay {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background: linear-gradient(to bottom, rgba(0, 0, 0, 0.16), transparent 30%, transparent 70%, rgba(0, 0, 0, 0.18));
+      mix-blend-mode: screen;
+    }
+
+    .message {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: rgba(100, 255, 100, 0.75);
+      font-size: 0.85rem;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      text-shadow: 0 0 12px rgba(100, 255, 100, 0.35);
+    }
+  </style>
+</head>
+<body>
+  <canvas id="matrix" data-speed="0.5"></canvas>
+  <div class="overlay"></div>
+  <script>
+    const canvas = document.getElementById("matrix");
+    const ctx = canvas.getContext("2d");
+
+    const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789あいうえおかきくけこさしすせそたちつてとなにぬねの";
+    const columns = [];
+    const DEFAULT_SPEED = 0.5;
+    const MIN_SPEED = 0;
+    const MAX_SPEED = 1;
+    const FALL_SPEED_OFFSET = 0.2;
+    const FALL_SPEED_SCALE = 1.4;
+    const RANDOM_DROP_FACTOR = 0.5;
+    const DEFAULT_COLOR = { r: 100, g: 255, b: 100 };
+    let fontSize = 18;
+    let lastZoom = getZoom();
+    const speed = resolveSpeed();
+    const mainColor = resolveColor();
+    const headColor = rgbToString(brighten(mainColor, 0.35), 0.95);
+
+    function getZoom() {
+      return window.visualViewport?.scale || window.devicePixelRatio || 1;
+    }
+
+    function parseSpeedValue(value) {
+      if (typeof value !== "string" || !value.length) {
+        return null;
+      }
+
+      const percentMatch = value.match(/^([+-]?\d+(?:\.\d+)?)%$/);
+      if (percentMatch) {
+        return parseFloat(percentMatch[1]) / 100;
+      }
+
+      const number = parseFloat(value);
+      return Number.isFinite(number) ? number : null;
+    }
+
+    function parseHexColor(value) {
+      if (typeof value !== "string") {
+        return null;
+      }
+
+      const normalized = value.trim().replace(/^#/, "");
+      const hex = normalized.length === 3
+        ? normalized.split("").map(c => c + c).join("")
+        : normalized;
+
+      if (!/^[0-9a-f]{6}$/i.test(hex)) {
+        return null;
+      }
+
+      return {
+        r: parseInt(hex.slice(0, 2), 16),
+        g: parseInt(hex.slice(2, 4), 16),
+        b: parseInt(hex.slice(4, 6), 16),
+      };
+    }
+
+    function rgbToString(color, alpha = 1) {
+      return `rgba(${color.r}, ${color.g}, ${color.b}, ${alpha})`;
+    }
+
+    function brighten(color, amount) {
+      return {
+        r: clamp(Math.round(color.r + (255 - color.r) * amount), 0, 255),
+        g: clamp(Math.round(color.g + (255 - color.g) * amount), 0, 255),
+        b: clamp(Math.round(color.b + (255 - color.b) * amount), 0, 255),
+      };
+    }
+
+    function resolveSpeed() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const rawSpeed = urlParams.get("speed");
+      if (rawSpeed !== null) {
+        const value = parseSpeedValue(rawSpeed);
+        if (value !== null) {
+          const speedValue = /^[+-]/.test(rawSpeed.trim())
+            ? getDatasetSpeed() + value
+            : value;
+          return clamp(speedValue, MIN_SPEED, MAX_SPEED);
+        }
+      }
+
+      return getDatasetSpeed();
+    }
+
+    function getDatasetSpeed() {
+      const raw = parseFloat(canvas.dataset.speed);
+      return Number.isFinite(raw) ? clamp(raw, MIN_SPEED, MAX_SPEED) : DEFAULT_SPEED;
+    }
+
+    function resolveColor() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const rawColor = urlParams.get("color");
+      const parsed = parseHexColor(rawColor);
+      return parsed || DEFAULT_COLOR;
+    }
+
+    function clamp(value, min, max) {
+      return Math.min(max, Math.max(min, value));
+    }
+
+    function resize() {
+      const cssWidth = window.innerWidth;
+      const cssHeight = window.innerHeight;
+      const zoom = getZoom();
+
+      canvas.style.width = `${cssWidth}px`;
+      canvas.style.height = `${cssHeight}px`;
+      canvas.width = Math.floor(cssWidth * zoom);
+      canvas.height = Math.floor(cssHeight * zoom);
+      ctx.setTransform(zoom, 0, 0, zoom, 0, 0);
+
+      fontSize = Math.max(14, Math.round(cssWidth / 80 * zoom));
+      const columnCount = Math.floor(cssWidth / fontSize);
+      columns.length = 0;
+
+      for (let i = 0; i < columnCount; i++) {
+        columns.push({ x: i * fontSize, y: Math.random() * cssHeight - cssHeight });
+      }
+    }
+
+    function draw() {
+      const zoom = getZoom();
+      if (Math.abs(zoom - lastZoom) > 0.01) {
+        lastZoom = zoom;
+        resize();
+      }
+
+      const cssWidth = window.innerWidth;
+      const cssHeight = window.innerHeight;
+
+      ctx.fillStyle = "rgba(0, 0, 0, 0.08)";
+      ctx.fillRect(0, 0, cssWidth, cssHeight);
+
+      ctx.font = `${fontSize}px Courier New, monospace`;
+      ctx.textAlign = "left";
+      ctx.textBaseline = "top";
+
+      const baseDrop = fontSize * (FALL_SPEED_OFFSET + speed * FALL_SPEED_SCALE);
+      for (const column of columns) {
+        const text = letters.charAt(Math.floor(Math.random() * letters.length));
+        const x = column.x;
+        const y = column.y;
+
+        ctx.fillStyle = headColor;
+        ctx.fillText(text, x, y);
+
+        for (let i = 1; i <= 4; i++) {
+          const alpha = 0.18 * (1 - i / 5);
+          ctx.fillStyle = rgbToString(mainColor, alpha);
+          ctx.fillText(text, x, y - i * fontSize);
+        }
+
+        column.y += baseDrop + Math.random() * fontSize * RANDOM_DROP_FACTOR;
+        if (column.y > cssHeight + Math.random() * 1000) {
+          column.y = -fontSize * Math.random() * 20;
+        }
+      }
+
+      requestAnimationFrame(draw);
+    }
+
+    window.addEventListener("resize", resize);
+    window.visualViewport?.addEventListener("resize", resize);
+    window.visualViewport?.addEventListener("scroll", resize);
+    resize();
+    draw();
+  </script>
+</body>
+</html>

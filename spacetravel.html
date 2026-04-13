@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<!--
+  spacetravel.html: Drifting starfield for a cinematic OBS backdrop with optional pixelation and dirt effects.
+  Use ?colorSpeed= to shift the background palette, ?pixelated= to enable crisp blocky rendering,
+  and ?dirt= to add subtle dust overlay texture.
+-->
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Celestial Drift: Odyssey Through the Void</title>
+    <style>
+        html,
+        body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #1a1a1a;
+            font-family: Arial, sans-serif;
+        }
+        canvas {
+            display: block;
+            width: 100vw;
+            height: 100vh;
+            background: #0a0a0a;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        let width = 0;
+        let height = 0;
+        let displayWidth = 0;
+        let displayHeight = 0;
+        const stars = [];
+        let speedFactor = 0.03;
+        const pixelScale = 8;
+        const bgColors = [
+            { h: 280, s: 60, l: 12 }, // purple
+            { h: 215, s: 85, l: 15 }, // blue
+            { h: 180, s: 80, l: 18 }, // cyan
+            { h: 245, s: 65, l: 12 }, // indigo
+            { h: 45, s: 100, l: 50 }, // amber
+            { h: 320, s: 80, l: 55 }, // magenta
+            { h: 340, s: 90, l: 75 }, // pink
+        ];
+        let currentColorIndex = 0;
+        let nextColorIndex = 1;
+        let cycleProgress = 0;
+        let pixelated = false;
+        let dirt = true;
+        let noiseCanvas;
+        let noiseCtx;
+
+        const query = new URLSearchParams(window.location.search);
+        const rawColorSpeed = query.get('colorSpeed') ?? query.get('speed');
+        const rawPixelated = query.get('pixelated');
+        const rawDirt = query.get('dirt');
+        let colorSpeed = 0.002;
+        if (rawColorSpeed !== null) {
+            const parsed = Number(rawColorSpeed);
+            if (!Number.isNaN(parsed) && parsed >= 0) {
+                colorSpeed = parsed;
+            }
+        }
+        if (rawPixelated !== null) {
+            const normalized = rawPixelated.trim().toLowerCase();
+            pixelated = normalized !== 'false' && normalized !== '0' && normalized !== 'no' && normalized !== 'off';
+        }
+        if (rawDirt !== null) {
+            const normalized = rawDirt.trim().toLowerCase();
+            dirt = normalized !== 'false' && normalized !== '0' && normalized !== 'no' && normalized !== 'off';
+        }
+
+        function resizeCanvas() {
+            const displayWidth = window.innerWidth;
+            const displayHeight = window.innerHeight;
+            width = pixelated ? Math.max(64, Math.floor(displayWidth / pixelScale)) : displayWidth;
+            height = pixelated ? Math.max(64, Math.floor(displayHeight / pixelScale)) : displayHeight;
+            canvas.width = width;
+            canvas.height = height;
+            canvas.style.imageRendering = pixelated ? 'pixelated' : 'auto';
+            initializeStars();
+            if (dirt) {
+                createNoiseTexture();
+            }
+        }
+
+        function createNoiseTexture() {
+            if (!noiseCanvas) {
+                noiseCanvas = document.createElement('canvas');
+                noiseCtx = noiseCanvas.getContext('2d');
+            }
+            noiseCanvas.width = width;
+            noiseCanvas.height = height;
+            const imageData = noiseCtx.createImageData(width, height);
+            const data = imageData.data;
+            for (let i = 0; i < data.length; i += 4) {
+                const shade = Math.floor(Math.random() * 48);
+                const alpha = Math.floor(Math.random() * 44) + 12;
+                data[i] = shade;
+                data[i + 1] = shade;
+                data[i + 2] = shade;
+                data[i + 3] = alpha;
+            }
+            noiseCtx.putImageData(imageData, 0, 0);
+        }
+
+        function interpolateValue(start, end, t) {
+            return start + (end - start) * t;
+        }
+
+        function hslString(h, s, l) {
+            return `hsl(${Math.round(h)}, ${Math.round(s)}%, ${Math.round(l)}%)`;
+        }
+
+        function initializeStars() {
+            stars.length = 0;
+            const starCount = pixelated ? 260 : 700;
+            for (let i = 0; i < starCount; i++) {
+                const isBright = Math.random() < 0.12;
+                stars.push({
+                    x: (Math.random() - 0.5) * width * 2,
+                    y: (Math.random() - 0.5) * height * 2,
+                    z: Math.random() * width,
+                    size: Math.random() * 2 + (isBright ? 1.4 : 0.4),
+                    hue: Math.random() * 60 + 180,
+                    alpha: isBright ? Math.random() * 0.25 + 0.75 : Math.random() * 0.45 + 0.25,
+                    isBright,
+                });
+            }
+        }
+
+        function drawBackground() {
+            const current = bgColors[currentColorIndex];
+            const next = bgColors[nextColorIndex];
+            const mixedH = interpolateValue(current.h, next.h, cycleProgress);
+            const mixedS = interpolateValue(current.s, next.s, cycleProgress);
+            const mixedL = interpolateValue(current.l, next.l, cycleProgress);
+            const darkTop = hslString(mixedH, mixedS, 4);
+            const darkBottom = hslString(mixedH, mixedS, 3);
+            const brightCenter = hslString(mixedH, Math.min(100, mixedS + 20), Math.min(70, mixedL + 45));
+            const nearBright = hslString(mixedH, Math.min(100, mixedS + 10), Math.min(55, mixedL + 25));
+
+            const gradient = ctx.createLinearGradient(0, 0, 0, height);
+            gradient.addColorStop(0, darkTop);
+            gradient.addColorStop(0.35, nearBright);
+            gradient.addColorStop(0.5, brightCenter);
+            gradient.addColorStop(0.65, nearBright);
+            gradient.addColorStop(1, darkBottom);
+
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, width, height);
+        }
+
+        function drawCenterStar() {
+            const cx = width / 2;
+            const cy = height / 2;
+            const radius = Math.min(width, height) * 0.05;
+            const gradient = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius * 4);
+            gradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
+            gradient.addColorStop(0.12, 'rgba(220, 240, 255, 0.9)');
+            gradient.addColorStop(0.25, 'rgba(220, 240, 255, 0.6)');
+            gradient.addColorStop(0.45, 'rgba(180, 210, 255, 0.2)');
+            gradient.addColorStop(1, 'rgba(2, 2, 20, 0)');
+
+            ctx.fillStyle = gradient;
+            ctx.fillRect(cx - radius * 4, cy - radius * 4, radius * 8, radius * 8);
+
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+            ctx.beginPath();
+            ctx.arc(cx, cy, radius * 0.5, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        function drawStars() {
+            const cx = width / 2;
+            const cy = height / 2;
+            stars.forEach((star) => {
+                star.z -= speedFactor * (star.z + 1);
+                if (star.z <= 1) {
+                    star.x = (Math.random() - 0.5) * width * 2;
+                    star.y = (Math.random() - 0.5) * height * 2;
+                    star.z = width;
+                    star.size = Math.random() * 2 + (star.isBright ? 1.4 : 0.4);
+                    star.hue = Math.random() * 60 + 180;
+                    star.alpha = star.isBright ? Math.random() * 0.25 + 0.75 : Math.random() * 0.45 + 0.25;
+                }
+
+                const px = cx + (star.x / star.z) * width;
+                const py = cy + (star.y / star.z) * width;
+                const radius = Math.max(1, (1 - star.z / width) * star.size * 4);
+                const alpha = Math.min(1, (1 - star.z / width) * 1.2) * star.alpha;
+
+                if (star.isBright) {
+                    ctx.shadowBlur = 6;
+                    ctx.shadowColor = `hsla(${star.hue}, 90%, 90%, ${alpha})`;
+                } else {
+                    ctx.shadowBlur = 0;
+                }
+
+                ctx.fillStyle = `hsla(${star.hue}, 90%, 90%, ${alpha})`;
+                ctx.fillRect(px, py, radius, radius);
+                if (star.isBright) {
+                    ctx.shadowBlur = 0;
+                }
+            });
+        }
+
+        function drawNebula(x, y, radius, color, offset) {
+            const gradient = ctx.createRadialGradient(x, y, 0, x, y, radius);
+            gradient.addColorStop(0, color);
+            gradient.addColorStop(1, 'rgba(2, 2, 20, 0)');
+            ctx.fillStyle = gradient;
+            ctx.globalAlpha = 0.8;
+            ctx.fillRect(x - radius, y - radius, radius * 2, radius * 2);
+            ctx.globalAlpha = 1;
+        }
+
+        function animate() {
+            cycleProgress += colorSpeed;
+            if (cycleProgress >= 1) {
+                cycleProgress -= 1;
+                currentColorIndex = nextColorIndex;
+                do {
+                    nextColorIndex = Math.floor(Math.random() * bgColors.length);
+                } while (nextColorIndex === currentColorIndex);
+            }
+            drawBackground();
+            drawCenterStar();
+            drawNebula(width * 0.24, height * 0.28, width * 0.28, 'rgba(120, 80, 255, 0.16)');
+            drawNebula(width * 0.72, height * 0.34, width * 0.22, 'rgba(35, 180, 255, 0.14)');
+            drawNebula(width * 0.55, height * 0.76, width * 0.3, 'rgba(255, 95, 190, 0.12)');
+            drawStars();
+            if (dirt && noiseCanvas) {
+                ctx.globalAlpha = 0.14;
+                ctx.drawImage(noiseCanvas, 0, 0);
+                ctx.globalAlpha = 1;
+            }
+            requestAnimationFrame(animate);
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+        animate();
+    </script>
+</body>
+</html>
