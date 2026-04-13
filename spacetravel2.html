@@ -32,10 +32,24 @@
       image-rendering: pixelated;
       background: #000;
     }
+
+    .nebula {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background: radial-gradient(circle at center,
+        hsla(var(--nebula-hue, 210), 72%, 38%, 0.38) 0%,
+        hsla(calc(var(--nebula-hue, 210) + 40), 64%, 24%, 0.24) 28%,
+        hsla(calc(var(--nebula-hue, 210) + 80), 55%, 16%, 0.14) 52%,
+        rgba(0, 0, 0, 1) 100%);
+      mix-blend-mode: screen;
+      opacity: 0.72;
+    }
   </style>
 </head>
 <body>
   <canvas id="canvas"></canvas>
+  <div class="nebula"></div>
   <script>
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
@@ -140,8 +154,14 @@
     }
 
     function animate() {
+      updateNebulaHue();
       draw();
       requestAnimationFrame(animate);
+    }
+
+    function updateNebulaHue() {
+      const hue = (performance.now() * 0.008) % 360;
+      document.documentElement.style.setProperty('--nebula-hue', hue.toString());
     }
 
     window.addEventListener('resize', resize);
