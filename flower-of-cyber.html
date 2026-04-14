@@ -15,9 +15,9 @@
   <script>
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
-    const phi = (1 + Math.sqrt(5)) / 2;
+    const params = new URLSearchParams(window.location.search);
     const defaultColor = '#05192d';
-    const activeColor = parseHexColor(new URLSearchParams(window.location.search).get('color')) || defaultColor;
+    const activeColor = parseHexColor(params.get('color')) || defaultColor;
     const derivedColor = deriveSecondaryColor(activeColor);
     const activeRgb = hexToRgb(activeColor);
     const derivedRgb = hexToRgb(derivedColor);
@@ -29,9 +29,10 @@
     const boxFillColor = rgbToCss(adjustLightness(derivedRgb, -0.06), 0.52);
     const boxStrokeColor = rgbToCss(adjustLightness(activeRgb, 0.42), 0.96);
     const boxTextColor = getContrastingTextColor(activeRgb);
+    const gridColor = rgbToCss(adjustLightness(activeRgb, 0.4), 0.08);
 
     const defaultSeconds = 69;
-    const requestedSeconds = parseInt(new URLSearchParams(window.location.search).get('seconds'), 10);
+    const requestedSeconds = parseInt(params.get('seconds'), 10);
     const baseSeconds = Number.isFinite(requestedSeconds) && requestedSeconds > 0 ? requestedSeconds : defaultSeconds;
     const baseMilliseconds = baseSeconds * 1000;
     let millisecondsRemaining = baseMilliseconds;
@@ -201,8 +202,6 @@
     }
 
     function drawBackgroundGrid(width, height) {
-      const gridAlpha = 0.08;
-      const gridColor = rgbToCss(adjustLightness(activeRgb, 0.4), gridAlpha);
       ctx.save();
       ctx.strokeStyle = gridColor;
       ctx.lineWidth = 1;
@@ -220,7 +219,6 @@
     }
 
     const textCharset = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789<>#%&*-=+[]{}():@~';
-    const textRatios = [1, 1 / phi, 1 / (phi * phi), 1 / (phi * phi * phi), phi, phi * phi];
     let randomLines = [];
     let targetRandomLengths = [];
     let randomLineIndex = 0;
@@ -321,6 +319,7 @@
       const lineHeight = 18;
       const contentHeight = lineHeight * (randomLines.length + 5);
       const boxHeight = contentHeight + padding * 2;
+      const boxRectWidth = boxWidth + padding * 2;
       const x = inset;
       const y = height - inset - boxHeight;
       const textX = x + padding;
@@ -328,10 +327,10 @@
 
       ctx.save();
       ctx.fillStyle = boxFillColor;
-      ctx.fillRect(x, y, boxWidth + padding * 2, boxHeight);
+      ctx.fillRect(x, y, boxRectWidth, boxHeight);
       ctx.strokeStyle = boxStrokeColor;
       ctx.lineWidth = 1.6;
-      ctx.strokeRect(x, y, boxWidth + padding * 2, boxHeight);
+      ctx.strokeRect(x, y, boxRectWidth, boxHeight);
 
       ctx.fillStyle = boxTextColor;
       ctx.font = '13px Courier, monospace';
@@ -416,14 +415,12 @@
       } else if (countdownState === 'rebooting') {
         if (time - countdownPhaseStart >= rebootDuration) {
           resetCountdown(time);
-          secondsRemaining = baseSeconds;
         }
       }
 
       if (typingState === 'typingRandom') {
         while (time - lastTypeTime >= typeDelay && randomLineIndex < randomLines.length) {
-          const current = randomLines[randomLineIndex];
-          if (current.length < targetRandomLengths[randomLineIndex]) {
+          if (randomLines[randomLineIndex].length < targetRandomLengths[randomLineIndex]) {
             randomLines[randomLineIndex] += getRandomChar();
             lastTypeTime += typeDelay;
           }
