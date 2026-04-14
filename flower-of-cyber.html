@@ -30,6 +30,18 @@
     const boxStrokeColor = rgbToCss(adjustLightness(activeRgb, 0.42), 0.96);
     const boxTextColor = getContrastingTextColor(activeRgb);
 
+    const defaultSeconds = 69;
+    const requestedSeconds = parseInt(new URLSearchParams(window.location.search).get('seconds'), 10);
+    const baseSeconds = Number.isFinite(requestedSeconds) && requestedSeconds > 0 ? requestedSeconds : defaultSeconds;
+    const baseMilliseconds = baseSeconds * 1000;
+    let millisecondsRemaining = baseMilliseconds;
+    let countdownState = 'running';
+    let lastCountdownTick = 0;
+    let countdownPhaseStart = 0;
+    let countdownMessage = '';
+    const garbleDuration = 900;
+    const rebootDuration = 900;
+
     function clamp(value, min, max) {
       return Math.min(max, Math.max(min, value));
     }
@@ -230,6 +242,45 @@
       return textCharset[Math.floor(Math.random() * textCharset.length)];
     }
 
+    function makeGarbleText(length) {
+      let result = '';
+      for (let i = 0; i < length; i++) {
+        result += getRandomChar();
+      }
+      return result;
+    }
+
+    function formatCountdown(ms) {
+      const totalHundredths = Math.max(0, Math.floor(ms / 10));
+      const minutes = Math.floor(totalHundredths / 6000);
+      const seconds = Math.floor((totalHundredths % 6000) / 100);
+      const hundredths = totalHundredths % 100;
+      return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}.${String(hundredths).padStart(2, '0')}`;
+    }
+
+    function resetCountdown(time) {
+      millisecondsRemaining = baseMilliseconds;
+      countdownState = 'running';
+      lastCountdownTick = time;
+      countdownPhaseStart = 0;
+      countdownMessage = '';
+    }
+
+    function drawCountdown(width) {
+      const text = countdownState === 'running'
+        ? formatCountdown(millisecondsRemaining)
+        : countdownMessage;
+      ctx.save();
+      ctx.font = '28px Courier, monospace';
+      ctx.fillStyle = boxTextColor;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.4)';
+      ctx.shadowBlur = 8;
+      ctx.fillText(text, width / 2, 35);
+      ctx.restore();
+    }
+
     function randomLineLength(maxChars) {
       const minLength = Math.max(8, Math.round(maxChars * 0.32));
       const maxLength = Math.max(minLength, Math.round(maxChars * 0.78));
@@ -337,6 +388,38 @@
         lastTypeTime = time;
       }
 
+      if (countdownState === 'running') {
+        if (lastCountdownTick === 0) {
+          lastCountdownTick = time;
+        }
+        const delta = time - lastCountdownTick;
+        if (delta > 0) {
+          millisecondsRemaining -= delta;
+          lastCountdownTick = time;
+        }
+        if (millisecondsRemaining <= 0) {
+          millisecondsRemaining = 0;
+          countdownState = 'garbling';
+          countdownPhaseStart = time;
+          countdownMessage = makeGarbleText(14);
+          lastCountdownTick = time;
+        }
+      } else if (countdownState === 'garbling') {
+        if (time - countdownPhaseStart >= garbleDuration) {
+          countdownState = 'rebooting';
+          countdownPhaseStart = time;
+          countdownMessage = '>>> REBOOTING....';
+        } else if (time - lastCountdownTick >= 60) {
+          countdownMessage = makeGarbleText(14);
+          lastCountdownTick = time;
+        }
+      } else if (countdownState === 'rebooting') {
+        if (time - countdownPhaseStart >= rebootDuration) {
+          resetCountdown(time);
+          secondsRemaining = baseSeconds;
+        }
+      }
+
       if (typingState === 'typingRandom') {
         while (time - lastTypeTime >= typeDelay && randomLineIndex < randomLines.length) {
           const current = randomLines[randomLineIndex];
@@ -398,6 +481,7 @@
       ctx.fillRect(0, 0, width, height);
       ctx.globalCompositeOperation = 'source-over';
 
+      drawCountdown(width);
       drawInfoBox(width, height, boxWidth);
 
       requestAnimationFrame(animate);
