@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sacred Geometry</title>
+  <style>
+    :root {
+      --base-color: #3f8eff;
+      --mid-color: #1c3f72;
+      --grid-color: rgba(255, 255, 255, 0.15);
+      --border-color: rgba(255, 255, 255, 0.8);
+    }
+
+    html,
+    body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: black;
+      color: white;
+      font-family: system-ui, sans-serif;
+    }
+
+    body {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      background-image:
+        linear-gradient(90deg, transparent 24px, var(--grid-color) 25px),
+        linear-gradient(180deg, transparent 24px, var(--grid-color) 25px),
+        radial-gradient(circle at center, var(--base-color) 0%, var(--mid-color) 45%, black 100%);
+      background-size: 25px 25px, 25px 25px, 100% 100%;
+      background-position: 0 0, 0 0, center center;
+      background-repeat: repeat, repeat, no-repeat;
+    }
+
+    .frame {
+      position: absolute;
+      inset: 25px;
+      border: 2px solid var(--border-color);
+      box-sizing: border-box;
+      pointer-events: none;
+    }
+
+    .content {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      place-items: center;
+      padding: 2rem;
+      width: min(100%, 880px);
+    }
+
+    .flower {
+      width: min(80vw, 680px);
+      max-width: 680px;
+      height: auto;
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <div class="frame"></div>
+  <div class="content">
+    <canvas id="flowerCanvas" class="flower" aria-hidden="true"></canvas>
+  </div>
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const colorParam = params.get('color');
+    const speedParam = parseFloat(params.get('speed'));
+    const animationSpeed = Math.min(Math.max(Number.isFinite(speedParam) ? speedParam : 1, 0.1), 10);
+    const DEFAULT_BASE = '3f8eff';
+
+    const pad = value => Math.round(value).toString(16).padStart(2, '0');
+
+    const normalizeHex = hex => {
+      if (!hex) return null;
+      const value = hex.trim().replace(/^#/, '');
+      if (value.length === 3) return value.split('').map(ch => ch + ch).join('');
+      return value.length === 6 ? value : null;
+    };
+
+    const hexToRgb = hex => {
+      const normalized = normalizeHex(hex);
+      if (!normalized) return null;
+      const int = parseInt(normalized, 16);
+      return {
+        r: (int >> 16) & 255,
+        g: (int >> 8) & 255,
+        b: int & 255
+      };
+    };
+
+    const rgbToHex = ({ r, g, b }) => `#${pad(r)}${pad(g)}${pad(b)}`;
+
+    const blendToBlack = ({ r, g, b }, ratio) => ({
+      r: r * (1 - ratio),
+      g: g * (1 - ratio),
+      b: b * (1 - ratio)
+    });
+
+    const baseHex = normalizeHex(colorParam) || DEFAULT_BASE;
+    const baseRgb = hexToRgb(baseHex);
+    const derived = {
+      base: `#${baseHex}`,
+      mid: rgbToHex(blendToBlack(baseRgb, 0.55)),
+      grid: `rgba(${baseRgb.r}, ${baseRgb.g}, ${baseRgb.b}, 0.18)`,
+      border: `rgba(${baseRgb.r}, ${baseRgb.g}, ${baseRgb.b}, 0.9)`
+    };
+
+    document.documentElement.style.setProperty('--base-color', derived.base);
+    document.documentElement.style.setProperty('--mid-color', derived.mid);
+    document.documentElement.style.setProperty('--grid-color', derived.grid);
+    document.documentElement.style.setProperty('--border-color', derived.border);
+
+    const borderRgb = baseRgb;
+    const canvasStroke = alpha => `rgba(${borderRgb.r}, ${borderRgb.g}, ${borderRgb.b}, ${alpha})`;
+    const pulseAlpha = (phase, index, step, min, range) => min + range * (0.5 + 0.5 * Math.sin(phase + index * step));
+    const strokeCircle = (ctx, x, y, radius) => {
+      ctx.beginPath();
+      ctx.arc(x, y, radius, 0, Math.PI * 2);
+      ctx.stroke();
+    };
+    const ringPoints = offset => [
+      { x: 0, y: 0 },
+      { x: offset, y: 0 },
+      { x: offset / 2, y: offset * 0.866 },
+      { x: -offset / 2, y: offset * 0.866 },
+      { x: -offset, y: 0 },
+      { x: -offset / 2, y: -offset * 0.866 },
+      { x: offset / 2, y: -offset * 0.866 },
+      { x: offset * 1.5, y: offset * 0.866 },
+      { x: offset * 1.5, y: -offset * 0.866 },
+      { x: 0, y: offset * 1.732 },
+      { x: -offset * 1.5, y: offset * 0.866 },
+      { x: -offset * 1.5, y: -offset * 0.866 },
+      { x: 0, y: -offset * 1.732 }
+    ];
+
+    const canvas = document.getElementById('flowerCanvas');
+    const ctx = canvas.getContext('2d');
+    let animationRotation = 0;
+    let lastTimestamp = 0;
+
+    const resizeCanvas = () => {
+      const width = Math.min(window.innerWidth * 0.8, 680);
+      const dpr = window.devicePixelRatio || 1;
+      canvas.style.width = `${width}px`;
+      canvas.style.height = `${width}px`;
+      canvas.width = Math.round(width * dpr);
+      canvas.height = Math.round(width * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    };
+
+    const animationModules = {
+      flower: {
+        draw(ctx, size, rotation) {
+          const center = size / 2;
+          const radius = size * 0.14;
+          const offset = radius;
+          const outerRadius = radius * 2.75;
+          const points = ringPoints(offset);
+
+          ctx.clearRect(0, 0, size, size);
+          ctx.save();
+          ctx.translate(center, center);
+          ctx.rotate(rotation);
+          ctx.strokeStyle = canvasStroke(0.94);
+          ctx.lineWidth = 2;
+          ctx.lineJoin = 'round';
+          ctx.lineCap = 'round';
+
+          ctx.beginPath();
+          ctx.arc(0, 0, outerRadius, 0, Math.PI * 2);
+          ctx.stroke();
+
+          const phase = rotation * 1.8;
+          points.forEach(({ x, y }, index) => {
+            const alpha = pulseAlpha(phase, index, 0.6, 0.5, 0.45);
+            ctx.strokeStyle = canvasStroke(alpha.toFixed(3));
+            strokeCircle(ctx, x, y, radius);
+          });
+
+          ctx.restore();
+        }
+      },
+      fruit: {
+        draw(ctx, size, rotation) {
+          const center = size / 2;
+          const radius = size * 0.095;
+          const ring = radius * 2.05;
+          const positions = ringPoints(ring);
+
+          ctx.clearRect(0, 0, size, size);
+          ctx.save();
+          ctx.translate(center, center);
+          ctx.rotate(rotation * 0.78);
+          ctx.lineWidth = 2;
+          ctx.lineJoin = 'round';
+          ctx.lineCap = 'round';
+
+          const phase = rotation * 1.6;
+          positions.forEach(({ x, y }, index) => {
+            const alpha = pulseAlpha(phase, index, 0.48, 0.45, 0.45);
+            ctx.strokeStyle = canvasStroke(alpha.toFixed(3));
+            strokeCircle(ctx, x, y, radius);
+          });
+
+          ctx.restore();
+        }
+      },
+      metatron: {
+        draw(ctx, size, rotation) {
+          const center = size / 2;
+          const radius = size * 0.08;
+          const ring = radius * 2.2;
+          const points = ringPoints(ring);
+
+          const connect = (a, b) => {
+            ctx.beginPath();
+            ctx.moveTo(a.x, a.y);
+            ctx.lineTo(b.x, b.y);
+            ctx.stroke();
+          };
+
+          const pairs = [
+            [0,1],[0,2],[0,3],[0,4],[0,5],[0,6],[0,7],[0,8],[0,9],[0,10],[0,11],[0,12],
+            [1,2],[2,3],[3,4],[4,5],[5,6],[6,1],
+            [1,7],[2,9],[3,10],[4,11],[5,12],[6,8],
+            [7,9],[9,10],[10,11],[11,12],[12,8],[8,7]
+          ];
+
+          ctx.clearRect(0, 0, size, size);
+          ctx.save();
+          ctx.translate(center, center);
+          ctx.lineWidth = 1.8;
+          ctx.lineJoin = 'round';
+          ctx.lineCap = 'round';
+
+          ctx.strokeStyle = canvasStroke(0.92);
+          pairs.forEach(([i,j]) => connect(points[i], points[j]));
+
+          const phase = rotation * 1.8;
+          points.forEach(({ x, y }, index) => {
+            const t = phase + index * 0.56;
+            const scale = 1 + 0.14 * Math.sin(t);
+            const alpha = pulseAlpha(phase, index, 0.56, 0.5, 0.4);
+            ctx.strokeStyle = canvasStroke(alpha.toFixed(3));
+            strokeCircle(ctx, x, y, radius * scale);
+          });
+
+          ctx.restore();
+        }
+      }
+    };
+
+    const selectedAnimation = animationModules[params.get('anim')?.toLowerCase()] || animationModules.flower;
+
+    const animate = timestamp => {
+      if (!lastTimestamp) lastTimestamp = timestamp;
+      const delta = timestamp - lastTimestamp;
+      lastTimestamp = timestamp;
+      animationRotation += delta * 0.00008 * animationSpeed;
+      selectedAnimation.draw(ctx, canvas.clientWidth, animationRotation);
+      requestAnimationFrame(animate);
+    };
+
+    window.addEventListener('resize', () => {
+      resizeCanvas();
+      selectedAnimation.draw(ctx, canvas.clientWidth, animationRotation);
+    });
+
+    resizeCanvas();
+    requestAnimationFrame(animate);
+  </script>
+</body>
+</html>
