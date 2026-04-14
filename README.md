@@ -20,6 +20,14 @@ This folder contains a small collection of HTML pages intended for use as OBS br
 ### [`flower-of-life.html`](flower-of-life.html)
 - A full-screen Flower of Life sacred-geometry animation with slow rotation and glowing circle intersections.
 
+### [`flower-of-cyber.html`](flower-of-cyber.html)
+- A cyber-inspired Flower of Life canvas animation with glowing lines and color customization.
+- Arguments: `?color=` (hex), `?seconds=` for timing behavior.
+
+### [`sacred.html`](sacred.html)
+- A sacred geometry demo with a radial gradient, 25px grid overlay, inset frame, and selectable canvas animations.
+- Arguments: `?color=` (hex), `?anim=` (`flower`, `fruit`, `metatron`), `?speed=`
+
 ### [`isogrid.html`](isogrid.html)
 - An isometric ripple grid that feels like Douglas Adams designed geometry after tea.
 - Arguments: `?color=#rrggbb` or `?color=rrggbb`, `?tileSize=` (16-256)
