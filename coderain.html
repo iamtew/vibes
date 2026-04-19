@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Code Rain</title>
+<style>
+  html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: transparent;
+  }
+  canvas {
+    display: block;
+    background: transparent;
+  }
+</style>
+</head>
+<body>
+<canvas id="coderain"></canvas>
+
+<script>
+// ---------------------------
+// GLOBALS
+// ---------------------------
+const canvas = document.getElementById("coderain");
+const ctx = canvas.getContext("2d", { alpha: true });
+
+let fontSize = 16;
+let columns = 0;
+let drops = [];
+
+const chars = "アイウエオカキクケコ0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+const charArray = chars.split("");
+
+// ---------------------------
+// URL PARAMS
+// ---------------------------
+const params = new URLSearchParams(location.search);
+
+// Color
+let codeColor = params.get("color") || "lime";
+if (/^[0-9a-fA-F]{3,8}$/.test(codeColor)) codeColor = "#" + codeColor;
+
+// Speed multiplier
+let speed = parseFloat(params.get("speed"));
+if (isNaN(speed) || speed <= 0) speed = 1;
+
+// ---------------------------
+// RESIZE + INIT
+// ---------------------------
+function initColumns() {
+  columns = Math.floor(canvas.width / fontSize);
+  drops = Array(columns).fill(1);
+}
+
+function resize() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  initColumns();
+}
+
+window.addEventListener("resize", resize);
+resize();
+
+// ---------------------------
+// DRAW LOOP
+// ---------------------------
+function draw() {
+  ctx.fillStyle = "rgba(0,0,0,0.05)";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  ctx.fillStyle = codeColor;
+  ctx.font = fontSize + "px monospace";
+
+  for (let i = 0; i < drops.length; i++) {
+    const char = charArray[Math.floor(Math.random() * charArray.length)];
+    ctx.fillText(char, i * fontSize, drops[i] * fontSize);
+
+    // speed multiplier applied here
+    drops[i] += speed;
+
+    if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
+      drops[i] = 0;
+    }
+  }
+
+  requestAnimationFrame(draw);
+}
+
+draw();
+</script>
+</body>
+</html>
