@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Pulsing Radial Gradient</title>
+<style>
+  html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: black;
+  }
+
+  #bg {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    background: black;
+  }
+</style>
+</head>
+<body>
+<div id="bg"></div>
+
+<script>
+(function () {
+  const bg = document.getElementById("bg");
+
+  // Read ?color= parameter
+  function getColor() {
+    const params = new URLSearchParams(window.location.search);
+    let c = params.get("color");
+    if (!c) return "#00D9FF";
+
+    c = c.trim();
+    if (/^[0-9a-fA-F]{3,8}$/.test(c)) c = "#" + c;
+    return c;
+  }
+
+  const baseColor = getColor();
+  let opacity = 1.0;
+  let direction = -1; // fade down first
+
+  function animate() {
+    // Update opacity
+    opacity += direction * 0.005;
+
+    if (opacity <= 0.5) {
+      opacity = 0.5;
+      direction = 1;
+    }
+    if (opacity >= 1.0) {
+      opacity = 1.0;
+      direction = -1;
+    }
+
+    // Apply radial gradient
+    bg.style.background = `
+      radial-gradient(circle,
+        ${hexToRGBA(baseColor, opacity)} 0%,
+        black 100%
+      )
+    `;
+
+    requestAnimationFrame(animate);
+  }
+
+  // Convert HEX → rgba(r,g,b,a)
+  function hexToRGBA(hex, alpha) {
+    hex = hex.replace("#", "");
+    if (hex.length === 3) {
+      hex = hex.split("").map(x => x + x).join("");
+    }
+    const num = parseInt(hex, 16);
+    const r = (num >> 16) & 255;
+    const g = (num >> 8) & 255;
+    const b = num & 255;
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  }
+
+  animate();
+})();
+</script>
+</body>
+</html>
+

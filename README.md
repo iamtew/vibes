@@ -35,6 +35,14 @@ This folder contains a small collection of HTML pages intended for use as OBS br
 ### [`liner.html`](liner.html)
 - Clean linear waveforms and animated stroke lines, useful for elegant animated overlays.
 
+### [`gradient.html`](gradient.html)
+- A pulsing radial gradient background that breathes light from the center outward.
+- Arguments: `?color=` (hex or named color, e.g. `#00D9FF`)
+
+### [`sinewaves.html`](sinewaves.html)
+- Animated CRT-style sine wave field with scanlines and occasional glitch slices.
+- Arguments: `?color=` (hex or named color)
+
 ### [`lines.html`](lines.html)
 - Full-screen terminal neon particles streaking across the screen, all motion and ambient glow.
 - No URL arguments supported yet.

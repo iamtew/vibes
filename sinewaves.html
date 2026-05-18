@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Sine Wave + CRT + Glitch</title>
+<style>
+    html, body {
+        margin: 0;
+        padding: 0;
+        background: transparent;
+        overflow: hidden;
+    }
+    canvas {
+        display: block;
+    }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<script>
+const canvas = document.getElementById("c");
+const ctx = canvas.getContext("2d");
+let w, h;
+
+function resize() {
+    w = canvas.width = window.innerWidth;
+    h = canvas.height = window.innerHeight;
+}
+window.addEventListener("resize", resize);
+resize();
+
+// ----------------------------
+// COLOR FROM URL
+// ----------------------------
+function getColorFromQuery() {
+    const params = new URLSearchParams(window.location.search);
+    let c = params.get("color");
+    if (!c) return "rgba(255,255,255,0.5)";
+
+    c = c.trim().toLowerCase();
+
+    // If hex without # → add it
+    if (/^[0-9a-f]{3}$/.test(c) || /^[0-9a-f]{6}$/.test(c)) {
+        c = "#" + c;
+    }
+
+    // If hex with # → validate
+    if (/^#[0-9a-f]{3}$/.test(c) || /^#[0-9a-f]{6}$/.test(c)) {
+        return c;
+    }
+
+    // Otherwise assume named color (browser will validate)
+    return c;
+}
+
+const waveColor = getColorFromQuery();
+
+// ----------------------------
+// CONFIG
+// ----------------------------
+const wave = {
+    amplitude: 40,
+    frequency: 0.015,
+    speed: 0.015,
+    lineSpacing: 20,
+    lineWidth: 1.2,
+    color: waveColor
+};
+
+const crt = {
+    spacing: 3,
+    opacity: 0.08,
+    driftSpeed: 0.2,
+    offset: 0
+};
+
+const glitch = {
+    chance: 0.004,
+    maxSlices: 5,
+    maxShift: 20,
+    maxHeight: 40,
+    duration: 120,
+    active: false,
+    slices: [],
+    timer: 0
+};
+
+// ----------------------------
+// SINE WAVE FIELD
+// ----------------------------
+function drawSineWaveField(t) {
+    ctx.lineWidth = wave.lineWidth;
+    ctx.strokeStyle = wave.color;
+
+    for (let x = 0; x < w; x += wave.lineSpacing) {
+        ctx.beginPath();
+        for (let y = 0; y < h; y += 5) {
+            const offset = Math.sin((x * wave.frequency) + (t * wave.speed)) * wave.amplitude;
+            ctx.lineTo(x + offset, y);
+        }
+        ctx.stroke();
+    }
+}
+
+// ----------------------------
+// CRT SCANLINES
+// ----------------------------
+function drawCRT() {
+    crt.offset += crt.driftSpeed;
+    if (crt.offset > crt.spacing) crt.offset = 0;
+
+    ctx.fillStyle = `rgba(0,0,0,${crt.opacity})`;
+
+    for (let y = crt.offset; y < h; y += crt.spacing) {
+        ctx.fillRect(0, y, w, 1);
+    }
+}
+
+// ----------------------------
+// GLITCH SLICES
+// ----------------------------
+function triggerGlitch() {
+    glitch.active = true;
+    glitch.timer = glitch.duration;
+    glitch.slices = [];
+
+    const count = Math.floor(Math.random() * glitch.maxSlices) + 1;
+
+    for (let i = 0; i < count; i++) {
+        const sliceY = Math.random() * h;
+        const sliceH = Math.random() * glitch.maxHeight + 10;
+        const shift = (Math.random() * glitch.maxShift * 2) - glitch.maxShift;
+
+        glitch.slices.push({ y: sliceY, h: sliceH, shift });
+    }
+}
+
+function applyGlitch() {
+    glitch.slices.forEach(s => {
+        const img = ctx.getImageData(0, s.y, w, s.h);
+        ctx.putImageData(img, s.shift, s.y);
+    });
+}
+
+// ----------------------------
+// MAIN LOOP
+// ----------------------------
+let t = 0;
+
+function animate() {
+    t++;
+
+    ctx.clearRect(0, 0, w, h);
+
+    drawSineWaveField(t);
+    drawCRT();
+
+    if (!glitch.active && Math.random() < glitch.chance) {
+        triggerGlitch();
+    }
+
+    if (glitch.active) {
+        applyGlitch();
+        glitch.timer--;
+        if (glitch.timer <= 0) glitch.active = false;
+    }
+
+    requestAnimationFrame(animate);
+}
+
+animate();
+</script>
+</body>
+</html>
+
+
