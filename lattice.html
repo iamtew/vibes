@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Hypercolor Orbital Lattice</title>
+<style>
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: radial-gradient(circle at center, #050510 0%, #020208 40%, #000000 100%);
+    overflow: hidden;
+    height: 100%;
+    width: 100%;
+  }
+  canvas {
+    display: block;
+    width: 100vw;
+    height: 100vh;
+  }
+</style>
+</head>
+<body>
+<canvas id="vibe"></canvas>
+<script>
+(function () {
+
+  /* -----------------------------
+     URL PARAMETER PARSING
+  ----------------------------- */
+
+  const params = new URLSearchParams(window.location.search);
+
+  // HEX → HUE converter
+  function hexToHue(hex) {
+    hex = hex.replace("#", "").trim();
+    if (hex.length === 3) hex = hex.split("").map(c => c + c).join("");
+    if (hex.length !== 6) return null;
+
+    const r = parseInt(hex.substring(0, 2), 16) / 255;
+    const g = parseInt(hex.substring(2, 4), 16) / 255;
+    const b = parseInt(hex.substring(4, 6), 16) / 255;
+
+    const max = Math.max(r, g, b), min = Math.min(r, g, b);
+    const d = max - min;
+
+    let h = 0;
+    if (d !== 0) {
+      if (max === r) h = ((g - b) / d) % 6;
+      else if (max === g) h = (b - r) / d + 2;
+      else h = (r - g) / d + 4;
+    }
+    h = Math.round(h * 60);
+    if (h < 0) h += 360;
+    return h;
+  }
+
+  /* COLOR PARAM */
+  const colorParam = params.get("color");
+  let userHue = null;
+  if (colorParam) {
+    const hexHue = hexToHue(colorParam);
+    if (hexHue !== null) userHue = hexHue;
+  }
+
+  /* SPEED PARAM */
+  let rotationSpeed = 0.0008;
+  const speedParam = parseFloat(params.get("speed"));
+  if (!isNaN(speedParam)) {
+    rotationSpeed = speedParam * 0.0001;
+  }
+
+  /* DENSITY PARAM */
+  let GRID_SIZE = 6;
+  const densityParam = parseInt(params.get("density"));
+  if (!isNaN(densityParam) && densityParam >= 2 && densityParam <= 12) {
+    GRID_SIZE = densityParam;
+  }
+
+  /* GLITCH PARAM */
+  let glitchMultiplier = 1;
+  const glitchParam = parseFloat(params.get("glitch"));
+  if (!isNaN(glitchParam)) {
+    glitchMultiplier = glitchParam;
+  }
+
+  /* BACKGROUND PARAM */
+  const bgParam = params.get("bg");
+  if (bgParam) {
+    const hex = bgParam.replace("#", "");
+    if (/^[0-9a-fA-F]{6}$/.test(hex)) {
+      document.body.style.background = "#" + hex;
+    }
+  }
+
+  /* -----------------------------
+     CANVAS SETUP
+  ----------------------------- */
+
+  const canvas = document.getElementById('vibe');
+  const ctx = canvas.getContext('2d');
+
+  let w, h, cx, cy, scale;
+  function resize() {
+    w = canvas.width = window.innerWidth * window.devicePixelRatio;
+    h = canvas.height = window.innerHeight * window.devicePixelRatio;
+    canvas.style.width = window.innerWidth + 'px';
+    canvas.style.height = window.innerHeight + 'px';
+    cx = w / 2;
+    cy = h / 2;
+    scale = Math.min(w, h) * 0.35;
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  /* -----------------------------
+     LATTICE SETUP
+  ----------------------------- */
+
+  const NODE_SPACING = 0.5;
+  const NODES = [];
+  const CONNECTIONS = [];
+
+  let baseHue = userHue !== null ? userHue : 200;
+  let rotation = 0;
+
+  function createLattice() {
+    NODES.length = 0;
+    CONNECTIONS.length = 0;
+
+    const half = (GRID_SIZE - 1) / 2;
+
+    for (let x = 0; x < GRID_SIZE; x++) {
+      for (let y = 0; y < GRID_SIZE; y++) {
+        for (let z = 0; z < GRID_SIZE; z++) {
+          const nx = (x - half) * NODE_SPACING;
+          const ny = (y - half) * NODE_SPACING;
+          const nz = (z - half) * NODE_SPACING;
+          NODES.push({
+            x: nx,
+            y: ny,
+            z: nz,
+            jitter: 0,
+            hueOffset: Math.random() * 60 - 30
+          });
+        }
+      }
+    }
+
+    const index = (x, y, z) => x * GRID_SIZE * GRID_SIZE + y * GRID_SIZE + z;
+
+    for (let x = 0; x < GRID_SIZE; x++) {
+      for (let y = 0; y < GRID_SIZE; y++) {
+        for (let z = 0; z < GRID_SIZE; z++) {
+          const i = index(x, y, z);
+          if (x < GRID_SIZE - 1) CONNECTIONS.push([i, index(x + 1, y, z)]);
+          if (y < GRID_SIZE - 1) CONNECTIONS.push([i, index(x, y + 1, z)]);
+          if (z < GRID_SIZE - 1) CONNECTIONS.push([i, index(x, y, z + 1)]);
+        }
+      }
+    }
+  }
+
+  createLattice();
+
+  /* -----------------------------
+     3D PROJECTION + ROTATION
+  ----------------------------- */
+
+  function project3D(x, y, z) {
+    const dist = 3.0;
+    const perspective = dist / (dist - z);
+    return {
+      x: cx + x * scale * perspective,
+      y: cy + y * scale * perspective,
+      p: perspective
+    };
+  }
+
+  function rotateNode(node, angle) {
+    const cosY = Math.cos(angle * 0.9);
+    const sinY = Math.sin(angle * 0.9);
+    const cosX = Math.cos(angle * 0.6);
+    const sinX = Math.sin(angle * 0.6);
+
+    let x = node.x;
+    let y = node.y;
+    let z = node.z;
+
+    let x1 = x * cosY - z * sinY;
+    let z1 = x * sinY + z * cosY;
+
+    let y1 = y * cosX - z1 * sinX;
+    let z2 = y * sinX + z1 * cosX;
+
+    return { x: x1, y: y1, z: z2 };
+  }
+
+  /* -----------------------------
+     GLITCH SYSTEM
+  ----------------------------- */
+
+  let glitchActive = false;
+  let glitchStart = 0;
+  let glitchDuration = 900;
+  let nextGlitchTime = performance.now() + 2500 + Math.random() * 2500;
+
+  function startGlitch(now) {
+    glitchActive = true;
+    glitchStart = now;
+    nextGlitchTime = now + (2500 + Math.random() * 3500) / glitchMultiplier;
+  }
+
+  function updateGlitch(now) {
+    if (glitchActive) {
+      const t = (now - glitchStart) / glitchDuration;
+      if (t >= 1) {
+        glitchActive = false;
+        NODES.forEach(n => n.jitter = 0);
+      } else {
+        const intensity = Math.sin(t * Math.PI);
+        NODES.forEach(n => n.jitter = intensity * 0.05);
+      }
+    } else if (now >= nextGlitchTime) {
+      startGlitch(now);
+    }
+  }
+
+  /* -----------------------------
+     MAIN DRAW LOOP
+  ----------------------------- */
+
+  function draw(now) {
+    requestAnimationFrame(draw);
+    const time = now || performance.now();
+
+    // Hue animation
+    if (userHue !== null) {
+      baseHue = (userHue + (time * 0.00005)) % 360;
+    } else {
+      baseHue = (baseHue + 0.02) % 360;
+    }
+
+    rotation += rotationSpeed * (1 + (glitchActive ? 1.5 : 0));
+    updateGlitch(time);
+
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.18)';
+    ctx.fillRect(0, 0, w, h);
+
+    ctx.globalCompositeOperation = 'lighter';
+
+    const transformed = NODES.map((n, i) => {
+      const r = rotateNode(n, rotation + i * 0.0005);
+      const jitter = n.jitter;
+      const jx = (Math.random() - 0.5) * jitter;
+      const jy = (Math.random() - 0.5) * jitter;
+      const jz = (Math.random() - 0.5) * jitter;
+      const proj = project3D(r.x + jx, r.y + jy, r.z + jz);
+      return {
+        sx: proj.x,
+        sy: proj.y,
+        p: proj.p,
+        hue: baseHue + n.hueOffset + (glitchActive ? 40 * (Math.random() - 0.5) : 0)
+      };
+    });
+
+    ctx.lineWidth = 1.2;
+    CONNECTIONS.forEach(([a, b]) => {
+      const na = transformed[a];
+      const nb = transformed[b];
+      const alpha = 0.12 * (na.p + nb.p);
+      if (alpha <= 0) return;
+      const midHue = (na.hue + nb.hue) / 2;
+      ctx.strokeStyle = `hsla(${midHue}, 80%, 60%, ${alpha})`;
+      ctx.beginPath();
+      ctx.moveTo(na.sx, na.sy);
+      ctx.lineTo(nb.sx, nb.sy);
+      ctx.stroke();
+    });
+
+    transformed.forEach((n, i) => {
+      const r = 2.2 * n.p;
+      const alpha = 0.4 * n.p;
+      const hue = n.hue;
+      const sat = 85;
+      const light = 60 + 10 * Math.sin(time * 0.001 + i * 0.3);
+
+      ctx.fillStyle = `hsla(${hue}, ${sat}%, ${light}%, ${alpha})`;
+      ctx.beginPath();
+      ctx.arc(n.sx, n.sy, r * 2.2, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = `hsla(${hue}, ${sat}%, ${light + 10}%, ${alpha * 0.4})`;
+      ctx.beginPath();
+      ctx.arc(n.sx, n.sy, r * 4.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      if (glitchActive && Math.random() < 0.25) {
+        const offset = 6 * (1 / n.p);
+        ctx.fillStyle = `hsla(${hue + 40}, ${sat}%, ${light + 5}%, ${alpha * 0.7})`;
+        ctx.beginPath();
+        ctx.arc(n.sx + offset, n.sy, r * 2.2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    });
+
+    const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(w, h) * 0.7);
+    grad.addColorStop(0, 'rgba(0,0,0,0)');
+    grad.addColorStop(1, 'rgba(0,0,0,0.6)');
+    ctx.globalCompositeOperation = 'multiply';
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, w, h);
+  }
+
+  requestAnimationFrame(draw);
+
+})();
+</script>
+</body>
+</html>
