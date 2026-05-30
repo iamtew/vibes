@@ -14,6 +14,10 @@ This folder contains a small collection of HTML pages intended for use as OBS br
 - Pixelated vapor blobs drift across an 8-bit sky, giving you weather effects without the meteorologist.
 - Arguments: `?speed=0-10`, `?info=1`
 
+### [`coderain.html`](coderain.html)
+- Chromatic code rain with Japanese characters and alphanumeric digits falling down the screen, creating an immersive digital atmosphere.
+- Arguments: `?color=` (hex or named color), `?speed=`
+
 ### [`field.html`](field.html)
 - A geometric field effect with animated lines and soft motion, good for subtle ambient backgrounds.
 
@@ -31,6 +35,10 @@ This folder contains a small collection of HTML pages intended for use as OBS br
 ### [`isogrid.html`](isogrid.html)
 - An isometric ripple grid that feels like Douglas Adams designed geometry after tea.
 - Arguments: `?color=#rrggbb` or `?color=rrggbb`, `?tileSize=` (16-256)
+
+### [`kladd.html`](kladd.html)
+- An experimental sketch file with color-shifting patterns and interactive effects—a work in progress for visual experimentation.
+- Arguments: `?color=` (hex)
 
 ### [`liner.html`](liner.html)
 - Clean linear waveforms and animated stroke lines, useful for elegant animated overlays.
@@ -69,7 +77,9 @@ This folder contains a small collection of HTML pages intended for use as OBS br
 ### [`startingsoon.html`](startingsoon.html)
 - Countdown timer page made for dramatic pauses, suspense, and theatrical “almost ready” vibes.
 - Arguments: `?seconds=`, `?title=`
-
+### [`voroni.html`](voroni.html)
+- A Voronoi diagram pulse field with colorful animated polygons that respond to mouse clicks and create dynamic pulsing effects.
+- Arguments: `?color=` (hex)
 ### [`empty.html`](empty.html)
 - The perfectly blank OBS source. Use it for testing, layering, or when you want empty space to feel intentional.
 
