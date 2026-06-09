@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Perlin Pixel Vibe</title>
+  <style>
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background: black;
+    }
+
+    canvas {
+      width: 100vw;
+      height: 100vh;
+      display: block;
+    }
+
+    /* --- UI PANEL --- */
+    #ui {
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      background: rgba(0, 0, 0, 0.6);
+      padding: 12px 16px;
+      border-radius: 8px;
+      color: white;
+      font-family: sans-serif;
+      font-size: 14px;
+      backdrop-filter: blur(6px);
+      z-index: 9999;
+    }
+
+    #ui label {
+      display: block;
+      margin-top: 8px;
+      font-size: 12px;
+      opacity: 0.8;
+    }
+
+    #ui select,
+    #ui input {
+      width: 160px;
+      margin-top: 2px;
+      padding: 4px;
+      border-radius: 4px;
+      border: none;
+      background: #222;
+      color: white;
+    }
+
+    #applyBtn {
+      margin-top: 12px;
+      width: 160px;
+      padding: 6px;
+      border: none;
+      border-radius: 4px;
+      background: #444;
+      color: white;
+      cursor: pointer;
+    }
+
+    #applyBtn:hover {
+      background: #666;
+    }
+
+    #toggleUI {
+      position: fixed;
+      bottom: 10px;
+      left: 10px;
+      background: rgba(0, 0, 0, 0.6);
+      color: white;
+      border: none;
+      padding: 8px 14px;
+      border-radius: 16px;
+      font-size: 14px;
+      cursor: pointer;
+      z-index: 10000;
+      backdrop-filter: blur(6px);
+    }
+
+    #toggleUI:hover {
+      background: rgba(80, 80, 80, 0.7);
+    }
+
+    #ui.hidden {
+      display: none;
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- ========================= -->
+  <!-- CONFIG PANEL UI           -->
+  <!-- ========================= -->
+  <button id="toggleUI">Settings</button>
+
+  <div id="ui" class="hidden">
+    <label>Mode</label>
+    <select id="modeSelect">
+      <option value="linear">Linear</option>
+      <option value="cosine">Cosine</option>
+      <option value="rainbow">Rainbow</option>
+      <option value="neon">Neon</option>
+      <option value="posterize">Posterize</option>
+    </select>
+
+    <label>Palette</label>
+    <select id="paletteSelect"></select>
+
+
+    <label>Pixel Size (px)</label>
+    <input id="pxSlider" type="range" min="8" max="256" step="1" value="16">
+    <input id="pxInput" type="number" min="8" max="256" step="1" value="16">
+
+    <label>Speed</label>
+    <input id="speedSlider" type="range" min="0.0001" max="0.01" step="0.0001" value="0.0004"><br>
+    <input id="speedInput" type="number" step="0.0001" min="0.0001" max="0.01" value="0.0004">
+
+    <label>Save</label>
+    <button id="applyBtn">Apply</button>
+  </div>
+
+  <canvas id="vibes"></canvas>
+
+  <script>
+    // =========================
+    // MENU TOGGLE
+    // =========================
+    const ui = document.getElementById("ui");
+    const toggleBtn = document.getElementById("toggleUI");
+
+    toggleBtn.addEventListener("click", () => {
+      ui.classList.toggle("hidden");
+    });
+
+    // =========================
+    // UI → URL PARAMETER SYNC
+    // =========================
+    const params = new URLSearchParams(location.search);
+
+    function getParam(name, fallback) {
+      return params.get(name) !== null ? params.get(name) : fallback;
+    }
+
+    document.getElementById("modeSelect").value = getParam("mode", "linear");
+
+    const pxValue = parseInt(getParam("px", 16));
+    document.getElementById("pxSlider").value = pxValue;
+    document.getElementById("pxInput").value = pxValue;
+
+    // Sync px slider → input
+    document.getElementById("pxSlider").addEventListener("input", e => {
+      document.getElementById("pxInput").value = e.target.value;
+    });
+
+    // Sync px input → slider
+    document.getElementById("pxInput").addEventListener("input", e => {
+      let v = parseInt(e.target.value);
+      if (isNaN(v)) return;
+      v = Math.min(256, Math.max(8, v));
+      document.getElementById("pxSlider").value = v;
+    });
+
+    const speedValue = parseFloat(getParam("speed", 0.0004));
+    document.getElementById("speedSlider").value = speedValue;
+    document.getElementById("speedInput").value = speedValue;
+
+    // Sync slider → input
+    document.getElementById("speedSlider").addEventListener("input", e => {
+      document.getElementById("speedInput").value = e.target.value;
+    });
+
+    // Sync input → slider
+    document.getElementById("speedInput").addEventListener("input", e => {
+      let v = parseFloat(e.target.value);
+      if (isNaN(v)) return;
+      v = Math.min(0.01, Math.max(0.0001, v));
+      document.getElementById("speedSlider").value = v;
+    });
+
+
+    // Palette dropdown (extendable)
+    const palettePresets = {
+      default: ["ff00ff", "00ffff", "ffaa00"]
+    };
+
+    palettePresets.rgb = ["ff0000", "00ff00", "0000ff"];
+    palettePresets.cmy = ["00ffff", "ff00ff", "ffff00"];
+    palettePresets.primary = ["ff0000", "00ff00", "0000ff", "ffff00"];
+
+    palettePresets.grayscale = ["333333", "666666", "999999", "dddddd"];
+    palettePresets.sunset = ["ff5500", "ffaa00", "ffee88"];
+    palettePresets.cyberpunk = ["00ffff", "ff00ff", "ff0088"];
+    palettePresets.earth = ["2e1f0f", "70543e", "c2a878", "f2e8cf"];
+
+    palettePresets.rgb = ["ff0000", "00ff00", "0000ff"];
+    palettePresets.cmy = ["00ffff", "ff00ff", "ffff00"];
+    palettePresets.primary = ["ff0000", "00ff00", "0000ff", "ffff00"];
+
+palettePresets.ice = ["a8e6ff", "6ecbff", "3aaed8", "1f7a8c"];
+palettePresets.glacier = ["001f3f", "005f73", "0a9396", "94d2bd"];
+palettePresets.nebulaBlue = ["0d1b2a", "1b263b", "415a77", "778da9"];
+
+
+palettePresets.vaporwave = ["ff71ce", "01cdfe", "05ffa1", "b967ff", "fffb96"];
+palettePresets.synth = ["ff00ff", "00ffff", "ff0088", "8800ff"];
+palettePresets.laser = ["ff0000", "00ffea", "ff00ea", "00ff44"];
+palettePresets.hologram = ["00f0ff", "ff00f0", "f0ff00"];
+
+
+palettePresets.forest = ["0b3d20", "145a32", "1e8449", "52be80"];
+palettePresets.moss = ["3a5a40", "588157", "a3b18a", "dad7cd"];
+palettePresets.autumn = ["7f5539", "9c6644", "b08968", "ddb892", "ede0d4"];
+palettePresets.stone = ["2b2d42", "8d99ae", "edf2f4", "d6d6d6"];
+
+palettePresets.cosmic = ["120458", "5b2a86", "9d4edd", "e0aaff"];
+palettePresets.supernova = ["ffcc00", "ff6600", "ff0066", "9900ff"];
+palettePresets.deepSpace = ["000814", "001d3d", "003566", "ffc300"];
+palettePresets.nebula = ["2d00f7", "6a00f4", "8900f2", "ff00e4", "ff8c00"];
+
+palettePresets.graySoft = ["222222", "555555", "888888", "bbbbbb"];
+palettePresets.grayHard = ["000000", "444444", "888888", "ffffff"];
+palettePresets.charcoal = ["0a0a0a", "1a1a1a", "2e2e2e", "4d4d4d"];
+
+palettePresets.pastel = ["ffadad", "ffd6a5", "fdffb6", "caffbf", "9bf6ff"];
+palettePresets.candy = ["ff6b6b", "ffb6b9", "fae3d9", "bbded6", "8ac6d1"];
+palettePresets.softserve = ["f7d1cd", "e8c2ca", "d1b3c4", "b392ac"];
+
+
+palettePresets.warning = ["ff0000", "ffff00", "000000"];
+palettePresets.cybersteel = ["00eaff", "00aaff", "005577", "001f33"];
+palettePresets.terminal = ["00ff00", "003300", "001100"];
+palettePresets.heatmap = ["0000ff", "00ffff", "00ff00", "ffff00", "ff0000"];
+
+
+
+
+    // Populate palette dropdown automatically
+    const paletteSelect = document.getElementById("paletteSelect");
+    for (const key in palettePresets) {
+      const opt = document.createElement("option");
+      opt.value = key;
+      opt.textContent = key.charAt(0).toUpperCase() + key.slice(1);
+      paletteSelect.appendChild(opt);
+    }
+
+
+    const paletteParam = params.get("palette");
+
+    // If URL contains a custom palette, add it as an option
+    if (paletteParam && !Object.values(palettePresets).some(p => p.join(",") === paletteParam)) {
+      const customOption = document.createElement("option");
+      customOption.value = "custom";
+      customOption.textContent = "Custom";
+      paletteSelect.appendChild(customOption);
+      paletteSelect.value = "custom";
+    } else {
+      // Select preset based on URL
+      const presetKey = Object.keys(palettePresets).find(
+        key => palettePresets[key].join(",") === paletteParam
+      );
+      paletteSelect.value = presetKey || "default";
+    }
+
+
+    // Apply button → rebuild URL
+    document.getElementById("applyBtn").onclick = () => {
+      const mode = document.getElementById("modeSelect").value;
+      const px = document.getElementById("pxInput").value;
+      const speed = document.getElementById("speedInput").value;
+
+      const paletteChoice = paletteSelect.value;
+      let palette;
+
+      if (paletteChoice === "custom") {
+        palette = params.get("palette"); // keep existing custom palette
+      } else {
+        palette = palettePresets[paletteChoice].join(",");
+      }
+
+      const newURL =
+        location.pathname +
+        `?mode=${mode}&px=${px}&speed=${speed}&palette=${palette}`;
+
+      location.href = newURL;
+    };
+
+
+    // =========================
+    // PARAMETERS FOR RENDERING
+    // =========================
+    const px = parseInt(getParam("px", 16));
+    const speed = parseFloat(getParam("speed", 0.0004));
+    const mode = getParam("mode", "linear");
+
+    let paletteList = paletteParam
+      ? paletteParam.split(",")
+      : palettePresets.default;
+
+    // Convert hex → [r,g,b]
+    function hexToRGB(hex) {
+      return [
+        parseInt(hex.substring(0, 2), 16),
+        parseInt(hex.substring(2, 4), 16),
+        parseInt(hex.substring(4, 6), 16)
+      ];
+    }
+
+    const paletteStops = paletteList.map(hexToRGB);
+
+    // =========================
+    // PALETTE MODES
+    // =========================
+    function paletteLinear(v) {
+      if (paletteStops.length === 1) return paletteStops[0];
+      const scaled = v * (paletteStops.length - 1);
+      const i = Math.floor(scaled);
+      const t = scaled - i;
+      const c1 = paletteStops[i];
+      const c2 = paletteStops[Math.min(i + 1, paletteStops.length - 1)];
+      return [
+        c1[0] + (c2[0] - c1[0]) * t,
+        c1[1] + (c2[1] - c1[1]) * t,
+        c1[2] + (c2[2] - c1[2]) * t
+      ];
+    }
+
+    function paletteCosine(v) {
+      if (paletteStops.length === 1) return paletteStops[0];
+      const scaled = v * (paletteStops.length - 1);
+      const i = Math.floor(scaled);
+      const t = (1 - Math.cos((scaled - i) * Math.PI)) / 2;
+      const c1 = paletteStops[i];
+      const c2 = paletteStops[Math.min(i + 1, paletteStops.length - 1)];
+      return [
+        c1[0] + (c2[0] - c1[0]) * t,
+        c1[1] + (c2[1] - c1[1]) * t,
+        c1[2] + (c2[2] - c1[2]) * t
+      ];
+    }
+
+    function paletteRainbow(v) {
+      const h = v * 360;
+      const s = 1;
+      const l = 0.5;
+      const c = (1 - Math.abs(2 * l - 1)) * s;
+      const hp = h / 60;
+      const x = c * (1 - Math.abs(hp % 2 - 1));
+      let r = 0, g = 0, b = 0;
+      if (hp < 1) [r, g, b] = [c, x, 0];
+      else if (hp < 2) [r, g, b] = [x, c, 0];
+      else if (hp < 3) [r, g, b] = [0, c, x];
+      else if (hp < 4) [r, g, b] = [0, x, c];
+      else if (hp < 5) [r, g, b] = [x, 0, c];
+      else[r, g, b] = [c, 0, x];
+      const m = l - c / 2;
+      return [
+        Math.floor((r + m) * 255),
+        Math.floor((g + m) * 255),
+        Math.floor((b + m) * 255)
+      ];
+    }
+
+    function paletteNeon(v) {
+      const c = paletteStops[0] || [0, 255, 255];
+      const glow = Math.pow(v, 0.25);
+      return [
+        Math.floor(c[0] * glow + 255 * (1 - glow) * 0.1),
+        Math.floor(c[1] * glow + 255 * (1 - glow) * 0.1),
+        Math.floor(c[2] * glow + 255 * (1 - glow) * 0.1)
+      ];
+    }
+
+    function palettePosterize(v) {
+      const steps = 6;
+      const band = Math.floor(v * steps) / steps;
+      return paletteLinear(band);
+    }
+
+    function palette(v) {
+      let rgb;
+      switch (mode) {
+        case "cosine": rgb = paletteCosine(v); break;
+        case "rainbow": rgb = paletteRainbow(v); break;
+        case "neon": rgb = paletteNeon(v); break;
+        case "posterize": rgb = palettePosterize(v); break;
+        default: rgb = paletteLinear(v);
+      }
+      return `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
+    }
+
+    // =========================
+    // Canvas + Perlin + Render
+    // =========================
+    const canvas = document.getElementById("vibes");
+    const ctx = canvas.getContext("2d");
+    let W, H;
+
+    function resize() {
+      W = canvas.width = window.innerWidth;
+      H = canvas.height = window.innerHeight;
+    }
+    window.addEventListener("resize", resize);
+    resize();
+
+    const PERM = new Uint8Array(512);
+    const GRAD3 = [
+      [1, 1, 0], [-1, 1, 0], [1, -1, 0], [-1, -1, 0],
+      [1, 0, 1], [-1, 0, 1], [1, 0, -1], [-1, 0, -1],
+      [0, 1, 1], [0, -1, 1], [0, 1, -1], [0, -1, -1]
+    ];
+
+    (function seed() {
+      const p = Array.from({ length: 256 }, (_, i) => i);
+      for (let i = 255; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [p[i], p[j]] = [p[j], p[i]];
+      }
+      for (let i = 0; i < 512; i++) PERM[i] = p[i & 255];
+    })();
+
+    function fade(t) { return t * t * t * (t * (t * 6 - 15) + 10); }
+    function lerp(a, b, t) { return a + t * (b - a); }
+    function grad(h, x, y, z) { const g = GRAD3[h % 12]; return g[0] * x + g[1] * y + g[2] * z; }
+
+    function noise3D(x, y, z) {
+      let X = Math.floor(x) & 255;
+      let Y = Math.floor(y) & 255;
+      let Z = Math.floor(z) & 255;
+      const xf = x - Math.floor(x);
+      const yf = y - Math.floor(y);
+      const zf = z - Math.floor(z);
+      const u = fade(xf), v = fade(yf), w = fade(zf);
+      const A = PERM[X] + Y, AA = PERM[A] + Z, AB = PERM[A + 1] + Z;
+      const B = PERM[X + 1] + Y, BA = PERM[B] + Z, BB = PERM[B + 1] + Z;
+      const x1 = lerp(grad(PERM[AA], xf, yf, zf), grad(PERM[BA], xf - 1, yf, zf), u);
+      const x2 = lerp(grad(PERM[AB], xf, yf - 1, zf), grad(PERM[BB], xf - 1, yf - 1, zf), u);
+      const y1 = lerp(x1, x2, v);
+      const x3 = lerp(grad(PERM[AA + 1], xf, yf, zf - 1), grad(PERM[BA + 1], xf - 1, yf, zf - 1), u);
+      const x4 = lerp(grad(PERM[AB + 1], xf, yf - 1, zf - 1), grad(PERM[BB + 1], xf - 1, yf - 1, zf - 1), u);
+      const y2 = lerp(x3, x4, v);
+      return lerp(y1, y2, w);
+    }
+
+    let time = 0;
+
+    function render() {
+      const scale = 0.01;
+      for (let y = 0; y < H; y += px) {
+        for (let x = 0; x < W; x += px) {
+          const n = noise3D(x * scale, y * scale, time * speed);
+          const v = (n * 0.5 + 0.5);
+          ctx.fillStyle = palette(v);
+          ctx.fillRect(x, y, px, px);
+        }
+      }
+    }
+
+    function loop(ts) {
+      time = ts;
+      render();
+      requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
+  </script>
+</body>
+
+</html>
