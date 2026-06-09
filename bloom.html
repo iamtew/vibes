@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Wireframe Nebula Bloom</title>
+<style>
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: radial-gradient(circle at center, #0f0f50 0%, #0b0b47 40%, #000000 100%);
+    overflow: hidden;
+    height: 100%;
+    width: 100%;
+  }
+  canvas {
+    display: block;
+    width: 100vw;
+    height: 100vh;
+  }
+</style>
+</head>
+<body>
+<canvas id="vibe"></canvas>
+<script>
+(function () {
+  /* -----------------------------
+     URL PARAMETER PARSING
+  ----------------------------- */
+  const params = new URLSearchParams(window.location.search);
+
+  function hexToHue(hex) {
+    hex = hex.replace("#", "").trim();
+    if (hex.length === 3) hex = hex.split("").map(c => c + c).join("");
+    if (hex.length !== 6) return null;
+    const r = parseInt(hex.slice(0, 2), 16) / 255;
+    const g = parseInt(hex.slice(2, 4), 16) / 255;
+    const b = parseInt(hex.slice(4, 6), 16) / 255;
+    const max = Math.max(r, g, b), min = Math.min(r, g, b);
+    const d = max - min;
+    let h = 0;
+    if (d !== 0) {
+      if (max === r) h = ((g - b) / d) % 6;
+      else if (max === g) h = (b - r) / d + 2;
+      else h = (r - g) / d + 4;
+    }
+    h = Math.round(h * 60);
+    if (h < 0) h += 360;
+    return h;
+  }
+
+  const colorParam = params.get("color");
+  let userHue = null;
+  if (colorParam) {
+    const hexHue = hexToHue(colorParam);
+    if (hexHue !== null) userHue = hexHue;
+  }
+
+  let speedFactor = 1;
+  const speedParam = parseFloat(params.get("speed"));
+  if (!isNaN(speedParam)) speedFactor = speedParam;
+
+  let DENSITY = 7;
+  const densityParam = parseInt(params.get("density"));
+  if (!isNaN(densityParam) && densityParam >= 3 && densityParam <= 20) {
+    DENSITY = densityParam;
+  }
+
+  let glitchMultiplier = 1;
+  const glitchParam = parseFloat(params.get("glitch"));
+  if (!isNaN(glitchParam)) glitchMultiplier = glitchParam;
+
+  const bgParam = params.get("bg");
+  if (bgParam) {
+    const hex = bgParam.replace("#", "");
+    if (/^[0-9a-fA-F]{6}$/.test(hex)) {
+      document.body.style.background = "#" + hex;
+    }
+  }
+
+  /* -----------------------------
+     CANVAS SETUP
+  ----------------------------- */
+  const canvas = document.getElementById('vibe');
+  const ctx = canvas.getContext('2d');
+
+  let w, h, cx, cy, baseRadius;
+  function resize() {
+    w = canvas.width = window.innerWidth * window.devicePixelRatio;
+    h = canvas.height = window.innerHeight * window.devicePixelRatio;
+    canvas.style.width = window.innerWidth + 'px';
+    canvas.style.height = window.innerHeight + 'px';
+    cx = w / 2;
+    cy = h / 2;
+    baseRadius = Math.min(w, h) * 0.5;
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  /* -----------------------------
+     NEBULA MESH SETUP
+  ----------------------------- */
+  const RINGS = DENSITY;
+  const SEGMENTS = DENSITY * 4;
+  const nodes = [];
+
+  function createMesh() {
+    nodes.length = 0;
+    for (let r = 0; r <= RINGS; r++) {
+      const ringT = r / RINGS;
+      for (let i = 0; i < SEGMENTS; i++) {
+        const angle = (i / SEGMENTS) * Math.PI * 2;
+        nodes.push({
+          ring: r,
+          t: ringT,
+          angle,
+          noiseOffset: Math.random() * 1000,
+          jitter: 0
+        });
+      }
+    }
+  }
+  createMesh();
+
+  let baseHue = userHue !== null ? userHue : 280;
+  let glitchActive = false;
+  let glitchStart = 0;
+  let glitchDuration = 900;
+  let nextGlitchTime = performance.now() + 2000 + Math.random() * 3000;
+
+  function startGlitch(now) {
+    glitchActive = true;
+    glitchStart = now;
+    nextGlitchTime = now + (2000 + Math.random() * 3000) / glitchMultiplier;
+  }
+
+  function updateGlitch(now) {
+    if (glitchActive) {
+      const t = (now - glitchStart) / glitchDuration;
+      if (t >= 1) {
+        glitchActive = false;
+        nodes.forEach(n => n.jitter = 0);
+      } else {
+        const intensity = Math.sin(t * Math.PI);
+        nodes.forEach(n => n.jitter = intensity * 0.12);
+      }
+    } else if (now >= nextGlitchTime) {
+      startGlitch(now);
+    }
+  }
+
+  function draw(now) {
+    requestAnimationFrame(draw);
+    const time = now || performance.now();
+    const t = time * 0.001 * speedFactor;
+
+    if (userHue !== null) {
+      baseHue = (userHue + time * 0.00005) % 360;
+    } else {
+      baseHue = (baseHue + 0.015) % 360;
+    }
+
+    updateGlitch(time);
+
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+    ctx.fillRect(0, 0, w, h);
+
+    ctx.globalCompositeOperation = 'lighter';
+
+    const breathing = 0.4 + 0.15 * Math.sin(t * 0.7);
+    const twist = 0.6 * Math.sin(t * 0.4);
+
+    const projected = nodes.map((n, idx) => {
+      const ringRadius = baseRadius * (n.t * 1.4 * breathing + 0.1);
+      const angle = n.angle + twist * n.t;
+      const jitterR = n.jitter * (Math.random() - 0.5) * baseRadius;
+      const jitterA = n.jitter * (Math.random() - 0.5) * 0.8;
+
+      const r = ringRadius + jitterR;
+      const a = angle + jitterA;
+
+      const x = cx + Math.cos(a) * r;
+      const y = cy + Math.sin(a) * r;
+
+      const depth = 0.3 + 0.7 * n.t;
+      const hue = baseHue + n.t * 80 + (glitchActive ? (Math.random() - 0.5) * 40 : 0);
+      const sat = 80;
+      const light = 45 + 20 * Math.sin(t * 0.9 + n.t * 4 + idx * 0.05);
+
+      return { x, y, depth, hue, sat, light };
+    });
+
+    ctx.lineWidth = 1.1;
+    for (let r = 0; r <= RINGS; r++) {
+      for (let i = 0; i < SEGMENTS; i++) {
+        const idx = r * SEGMENTS + i;
+        const nextIdx = r * SEGMENTS + ((i + 1) % SEGMENTS);
+        const n1 = projected[idx];
+        const n2 = projected[nextIdx];
+        const alpha = 0.08 * (n1.depth + n2.depth);
+        if (alpha <= 0) continue;
+        const midHue = (n1.hue + n2.hue) / 2;
+        ctx.strokeStyle = `hsla(${midHue}, 80%, 60%, ${alpha})`;
+        ctx.beginPath();
+        ctx.moveTo(n1.x, n1.y);
+        ctx.lineTo(n2.x, n2.y);
+        ctx.stroke();
+      }
+    }
+
+    for (let r = 0; r < RINGS; r++) {
+      for (let i = 0; i < SEGMENTS; i++) {
+        const idx = r * SEGMENTS + i;
+        const belowIdx = (r + 1) * SEGMENTS + i;
+        const n1 = projected[idx];
+        const n2 = projected[belowIdx];
+        const alpha = 0.06 * (n1.depth + n2.depth);
+        if (alpha <= 0) continue;
+        const midHue = (n1.hue + n2.hue) / 2;
+        ctx.strokeStyle = `hsla(${midHue}, 80%, 55%, ${alpha})`;
+        ctx.beginPath();
+        ctx.moveTo(n1.x, n1.y);
+        ctx.lineTo(n2.x, n2.y);
+        ctx.stroke();
+      }
+    }
+
+    projected.forEach((n, idx) => {
+      const r = 1.5 + 2.5 * n.depth;
+      const alpha = 0.35 * n.depth;
+      ctx.fillStyle = `hsla(${n.hue}, ${n.sat}%, ${n.light}%, ${alpha})`;
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, r, 0, Math.PI * 2);
+      ctx.fill();
+
+      if (glitchActive && Math.random() < 0.18) {
+        const offset = 8 * (1.2 - n.depth);
+        ctx.fillStyle = `hsla(${n.hue + 30}, ${n.sat}%, ${n.light + 10}%, ${alpha * 0.7})`;
+        ctx.beginPath();
+        ctx.ellipse(n.x + offset, n.y, r * 2.2, r * 0.8, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    });
+
+    const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(w, h) * 0.7);
+    grad.addColorStop(0, 'rgba(0,0,0,0)');
+    grad.addColorStop(1, 'rgba(0,0,0,0.7)');
+    ctx.globalCompositeOperation = 'multiply';
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, w, h);
+  }
+
+  requestAnimationFrame(draw);
+})();
+</script>
+</body>
+</html>
