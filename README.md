@@ -1,6 +1,8 @@
-# OBS HTML Assets
+# Vibes by tew
 
-This folder contains a small collection of HTML pages intended for use as OBS browser sources, background visuals, countdown screens, and local previews.
+*You know the vibes!*
+
+This folder contains a collection of various HTML pages intended for use as OBS browser sources, background visuals, countdown screens, local previews, and such. All files are stand-alone and contain everything they need inside of them. [Full code repository is available on GitHub.](https://github.com/iamtew/vibes)
 
 ## Files Included
 
