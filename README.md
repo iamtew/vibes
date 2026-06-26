@@ -98,8 +98,15 @@ This folder contains a collection of various HTML pages intended for use as OBS 
 ### [`startingsoon.html`](startingsoon.html)
 - Countdown timer page made for dramatic pauses, suspense, and theatrical “almost ready” vibes.
 - Arguments: `?seconds=`, `?title=`
+
 ### [`voroni.html`](voroni.html)
 - A Voronoi diagram pulse field with colorful animated polygons that respond to mouse clicks and create dynamic pulsing effects.
 - Arguments: `?color=` (hex)
+
+### [`voroni2.html`](voroni2.html)
+- A reactive Voronoi pulse‑field with evolving color palettes, procedural color mode, and edge‑driven glitch bursts that travel along cell boundaries. Includes a settings menu for live control of color, speed, density, glitch intensity, and palette behavior.
+- Arguments: `?color=` (hex), `?palette=procedural`, `?speed=`, `?glitch=`, `?density=`, `?menu=ON|OFF|DISABLE`
+
+
 ### [`empty.html`](empty.html)
 - The perfectly blank OBS source. Use it for testing, layering, or when you want empty space to feel intentional.
