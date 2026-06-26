@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>voroni2 – Voronoi Pulse Field</title>
+  <style>
+    :root { color-scheme: dark; }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #000;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    canvas {
+      display: block;
+      width: 100vw;
+      height: 100vh;
+    }
+
+    /* SETTINGS MENU */
+    #menuToggle {
+      position: fixed;
+      bottom: 16px;
+      left: 16px;
+      font-size: 32px;
+      cursor: pointer;
+      z-index: 9999;
+      user-select: none;
+    }
+    #settingsMenu {
+      position: fixed;
+      bottom: 16px;
+      left: 16px;
+      width: 260px;
+      padding: 16px;
+      background: rgba(0,0,0,0.85);
+      border: 1px solid #444;
+      border-radius: 8px;
+      color: #fff;
+      z-index: 9998;
+      backdrop-filter: blur(6px);
+    }
+    #settingsMenu.hidden { display: none; }
+    #settingsMenu label {
+      margin-top: 10px;
+      display: block;
+      font-size: 14px;
+      opacity: 0.8;
+    }
+    #settingsMenu input,
+    #settingsMenu select {
+      width: 100%;
+      margin-top: 4px;
+    }
+    #resetBtn {
+      margin-top: 16px;
+      width: 100%;
+      padding: 8px;
+      background: #ff4040;
+      border: none;
+      border-radius: 6px;
+      color: white;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+<canvas id="vibes"></canvas>
+
+<!-- SETTINGS MENU -->
+<div id="menuToggle">⭕</div>
+
+<div id="settingsMenu" class="hidden">
+  <h2>Voronoi Pulse Field</h2>
+
+  <label>Color Preset</label>
+  <select id="colorPreset">
+    <option value="custom">Custom</option>
+    <option value="procedural">Procedural</option>
+
+    <option value="#40b0ff">Blue</option>
+    <option value="#ff4081">Pink</option>
+    <option value="#40ff90">Mint</option>
+    <option value="#ffd040">Gold</option>
+    <option value="#ff4040">Red</option>
+
+    <option value="#8a2be2">Electric Purple</option>
+    <option value="#ff6ec7">Bubblegum Neon</option>
+    <option value="#00e5ff">Aqua Laser</option>
+    <option value="#ffb300">Solar Amber</option>
+    <option value="#00ff95">Cyber Mint</option>
+    <option value="#ff3d00">Inferno Orange</option>
+    <option value="#9dff00">Toxic Lime</option>
+    <option value="#ff00e6">Magenta Plasma</option>
+    <option value="#3d5afe">Royal Blue Glow</option>
+    <option value="#ffd6e0">Soft Pastel Pink</option>
+    <option value="#b388ff">Lavender Dream</option>
+    <option value="#00ffc8">Crystal Teal</option>
+    <option value="#ff9e80">Peach Ember</option>
+    <option value="#c6ff00">Volt Yellow</option>
+    <option value="#ff1744">Hyper Red</option>
+  </select>
+
+  <label>Custom HEX</label>
+  <input id="customColor" type="text" placeholder="#40b0ff" />
+
+  <label>Speed</label>
+  <input id="speed" type="range" min="0" max="10" step="0.1" />
+
+  <label>Glitch</label>
+  <input id="glitch" type="range" min="0" max="1" step="0.01" />
+
+  <label>Density</label>
+  <input id="density" type="range" min="20" max="800" step="1" />
+
+  <button id="resetBtn">RESET</button>
+</div>
+
+<script>
+/* -----------------------------------------------------------
+   SETTINGS MENU LOGIC
+----------------------------------------------------------- */
+(function () {
+  const params = new URLSearchParams(location.search);
+
+  const menuToggle = document.getElementById("menuToggle");
+  const menu = document.getElementById("settingsMenu");
+
+  const colorPreset = document.getElementById("colorPreset");
+  const customColor = document.getElementById("customColor");
+  const speedInput = document.getElementById("speed");
+  const glitchInput = document.getElementById("glitch");
+  const densityInput = document.getElementById("density");
+  const resetBtn = document.getElementById("resetBtn");
+
+  const menuState = (params.get("menu") || "OFF").toUpperCase();
+
+  if (menuState === "DISABLE") {
+    menuToggle.style.display = "none";
+    menu.classList.add("hidden");
+  } else if (menuState === "ON") {
+    menu.classList.remove("hidden");
+  } else {
+    menu.classList.add("hidden");
+  }
+
+  menuToggle.addEventListener("click", () => {
+    const isOpen = !menu.classList.contains("hidden");
+    params.set("menu", isOpen ? "OFF" : "ON");
+    menu.classList.toggle("hidden");
+    history.replaceState({}, "", "?" + params.toString());
+  });
+
+  /* INITIAL VALUES */
+  const baseColor = params.get("color") || "#40b0ff";
+  const paletteMode = params.get("palette") || "static";
+
+  if (paletteMode === "procedural") {
+    colorPreset.value = "procedural";
+  } else if ([...colorPreset.options].some(o => o.value === baseColor)) {
+    colorPreset.value = baseColor;
+    customColor.value = baseColor;
+  } else {
+    colorPreset.value = "custom";
+    customColor.value = baseColor;
+  }
+
+  speedInput.value = params.get("speed") || "4";
+  glitchInput.value = params.get("glitch") || "0.02";
+  densityInput.value = params.get("density") || "220";
+
+  /* UPDATE PARAMS */
+  function updateParam(key, value) {
+    params.set(key, value);
+    history.replaceState({}, "", "?" + params.toString());
+  }
+
+  colorPreset.addEventListener("change", () => {
+    if (colorPreset.value === "custom") {
+      updateParam("color", customColor.value);
+      params.delete("palette");
+      return;
+    }
+
+    if (colorPreset.value === "procedural") {
+      params.delete("color");
+      params.set("palette", "procedural");
+      history.replaceState({}, "", "?" + params.toString());
+      return;
+    }
+
+    customColor.value = colorPreset.value;
+    updateParam("color", colorPreset.value);
+    params.delete("palette");
+  });
+
+  customColor.addEventListener("input", () => {
+    if (colorPreset.value === "procedural") return;
+    colorPreset.value = "custom";
+    updateParam("color", customColor.value);
+  });
+
+  speedInput.addEventListener("input", () => updateParam("speed", speedInput.value));
+  glitchInput.addEventListener("input", () => updateParam("glitch", glitchInput.value));
+  densityInput.addEventListener("input", () => updateParam("density", densityInput.value));
+
+  resetBtn.addEventListener("click", () => {
+    params.delete("color");
+    params.delete("palette");
+    params.delete("speed");
+    params.delete("glitch");
+    params.delete("density");
+    history.replaceState({}, "", location.pathname);
+    location.reload();
+  });
+})();
+</script>
+
+<script>
+/* -----------------------------------------------------------
+   VORONOI PULSE FIELD ENGINE — PROCEDURAL PALETTE + EDGE GLITCH
+----------------------------------------------------------- */
+(function () {
+  const canvas = document.getElementById("vibes");
+  const ctx = canvas.getContext("2d");
+
+  function parseColor(hex, fallback) {
+    if (!hex) return fallback;
+    if (!/^#?[0-9a-fA-F]{6}$/.test(hex)) return fallback;
+    hex = hex.replace("#", "");
+    return {
+      r: parseInt(hex.slice(0, 2), 16),
+      g: parseInt(hex.slice(2, 4), 16),
+      b: parseInt(hex.slice(4, 6), 16)
+    };
+  }
+
+  function resize() {
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = window.innerWidth * dpr;
+    canvas.height = window.innerHeight * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  window.addEventListener("resize", resize);
+  resize();
+
+  const W = () => canvas.width / (window.devicePixelRatio || 1);
+  const H = () => canvas.height / (window.devicePixelRatio || 1);
+
+  function rand() { return Math.random(); }
+  function lerp(a, b, t) { return a + (b - a) * t; }
+
+  function rgbToHsl(r, g, b) {
+    r /= 255; g /= 255; b /= 255;
+    const max = Math.max(r, g, b), min = Math.min(r, g, b);
+    let h, s, l = (max + min) / 2;
+    if (max === min) { h = s = 0; }
+    else {
+      const d = max - min;
+      s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+      switch (max) {
+        case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+        case g: h = (b - r) / d + 2; break;
+        case b: h = (r - g) / d + 4; break;
+      }
+      h /= 6;
+    }
+    return { h, s, l };
+  }
+
+  /* POINTS */
+  const points = [];
+  function rebuildPoints(density) {
+    points.length = 0;
+    for (let i = 0; i < density; i++) {
+      points.push({
+        x: rand() * W(),
+        y: rand() * H(),
+        phase: rand() * Math.PI * 2,
+        driftX: (rand() - 0.5) * 0.3,
+        driftY: (rand() - 0.5) * 0.3
+      });
+    }
+  }
+
+  rebuildPoints(220);
+
+  /* GLITCH BURST STATE */
+  let glitchBurst = {
+    active: false,
+    start: 0,
+    duration: 600
+  };
+
+  let lastTime = performance.now();
+
+  function step(now) {
+    const params = new URLSearchParams(location.search);
+
+    const speed = parseFloat(params.get("speed") || "4");
+    const glitchProb = parseFloat(params.get("glitch") || "0.02");
+    const density = parseInt(params.get("density") || "220", 10);
+    const paletteMode = params.get("palette") || "static";
+
+    let baseHSL;
+
+    if (paletteMode === "procedural") {
+      const hue = (Math.sin(now * 0.0001) * 0.5 + 0.5);
+      baseHSL = { h: hue, s: 0.75, l: 0.55 };
+    } else {
+      const baseColorHex = params.get("color") || "#40b0ff";
+      const baseColor = parseColor(baseColorHex, { r: 64, g: 176, b: 255 });
+      baseHSL = rgbToHsl(baseColor.r, baseColor.g, baseColor.b);
+    }
+
+    const bgHex = params.get("bg") || "#000000";
+    const bgColor = parseColor(bgHex, { r: 0, g: 0, b: 0 });
+
+    if (points.length !== density) rebuildPoints(density);
+
+    const dt = (now - lastTime) / 1000;
+    lastTime = now;
+
+    const w = W();
+    const h = H();
+
+    const globalPhase = now * 0.0003 * (0.5 + speed / 10);
+
+    ctx.fillStyle = `rgb(${bgColor.r}, ${bgColor.g}, ${bgColor.b})`;
+    ctx.fillRect(0, 0, w, h);
+
+    /* TRIGGER GLITCH BURST */
+    if (!glitchBurst.active && Math.random() < glitchProb * dt * 0.5) {
+      glitchBurst.active = true;
+      glitchBurst.start = now;
+    }
+
+    let burstIntensity = 0;
+    if (glitchBurst.active) {
+      const t = (now - glitchBurst.start) / glitchBurst.duration;
+      if (t >= 1) glitchBurst.active = false;
+      else burstIntensity = 1 - t;
+    }
+
+    /* UPDATE POINTS */
+    for (let p of points) {
+      p.x += p.driftX * (0.5 + speed / 10);
+      p.y += p.driftY * (0.5 + speed / 10);
+
+      if (p.x < -20) p.x = w + 20;
+      if (p.x > w + 20) p.x = -20;
+      if (p.y < -20) p.y = h + 20;
+      if (p.y > h + 20) p.y = -20;
+    }
+
+    const cellSize = 10;
+    const cols = Math.ceil(w / cellSize);
+    const rows = Math.ceil(h / cellSize);
+
+    for (let gy = 0; gy < rows; gy++) {
+      const y = gy * cellSize + cellSize * 0.5;
+      for (let gx = 0; gx < cols; gx++) {
+        const x = gx * cellSize + cellSize * 0.5;
+
+        /* NEAREST + SECOND NEAREST */
+        let bestIdx = -1, secondIdx = -1;
+        let bestDist = Infinity, secondDist = Infinity;
+
+        for (let i = 0; i < points.length; i++) {
+          const p = points[i];
+          const dx = x - p.x;
+          const dy = y - p.y;
+          const d2 = dx * dx + dy * dy;
+
+          if (d2 < bestDist) {
+            secondDist = bestDist;
+            secondIdx = bestIdx;
+            bestDist = d2;
+            bestIdx = i;
+          } else if (d2 < secondDist) {
+            secondDist = d2;
+            secondIdx = i;
+          }
+        }
+
+        const p = points[bestIdx];
+
+        /* BASE COLOR */
+        const pulsePhase = p.phase + now * 0.0015 * (0.5 + speed / 10);
+        const pulse = 0.5 + 0.5 * Math.sin(pulsePhase);
+
+        const wave = 0.5 + 0.5 * Math.sin(globalPhase + (x / w) * 3.0 + (y / h) * 2.0);
+
+        const distNorm = Math.min(1, Math.sqrt(bestDist) / (Math.min(w, h) * 0.35));
+        const softness = 1 - distNorm;
+
+        let brightness = lerp(0.2, 0.95, pulse * 0.5 + wave * 0.3 + softness * 0.2);
+
+        const hueOffset = (globalPhase * 0.15 + p.phase * 0.05) % (Math.PI * 2);
+        let hVal = (baseHSL.h + (hueOffset / (Math.PI * 2)) * 0.25) % 1;
+        let sVal = lerp(baseHSL.s, 1.0, 0.4);
+        let lVal = brightness;
+
+        /* EDGE DISTANCE GLITCH */
+        if (burstIntensity > 0) {
+          const edgeDist = Math.sqrt(secondDist - bestDist);
+          const edgeFactor = Math.max(0, 1 - edgeDist * 0.02);
+          const local = burstIntensity * edgeFactor;
+
+          hVal = (hVal + local * 0.25) % 1;
+          sVal = Math.min(1, sVal + local * 0.5);
+          lVal = Math.min(1, lVal + local * 0.4);
+        }
+
+        ctx.fillStyle = `hsl(${(hVal * 360).toFixed(1)}deg, ${(sVal * 100).toFixed(1)}%, ${(lVal * 100).toFixed(1)}%)`;
+        ctx.fillRect(gx * cellSize, gy * cellSize, cellSize + 1, cellSize + 1);
+      }
+    }
+
+    requestAnimationFrame(step);
+  }
+
+  requestAnimationFrame(step);
+})();
+</script>
+
+</body>
+</html>
