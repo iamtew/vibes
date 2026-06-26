@@ -221,7 +221,7 @@
 
 <script>
 /* -----------------------------------------------------------
-   VORONOI PULSE FIELD ENGINE — PROCEDURAL PALETTE + EDGE GLITCH
+   VORONOI PULSE FIELD ENGINE — DARK GLITCH VERSION
 ----------------------------------------------------------- */
 (function () {
   const canvas = document.getElementById("vibes");
@@ -397,14 +397,15 @@
         const distNorm = Math.min(1, Math.sqrt(bestDist) / (Math.min(w, h) * 0.35));
         const softness = 1 - distNorm;
 
-        let brightness = lerp(0.2, 0.95, pulse * 0.5 + wave * 0.3 + softness * 0.2);
+        /* DARKER BASE BRIGHTNESS */
+        let brightness = lerp(0.05, 0.6, pulse * 0.5 + wave * 0.3 + softness * 0.2);
 
         const hueOffset = (globalPhase * 0.15 + p.phase * 0.05) % (Math.PI * 2);
         let hVal = (baseHSL.h + (hueOffset / (Math.PI * 2)) * 0.25) % 1;
         let sVal = lerp(baseHSL.s, 1.0, 0.4);
         let lVal = brightness;
 
-        /* EDGE DISTANCE GLITCH */
+        /* EDGE DISTANCE GLITCH — DARK VERSION */
         if (burstIntensity > 0) {
           const edgeDist = Math.sqrt(secondDist - bestDist);
           const edgeFactor = Math.max(0, 1 - edgeDist * 0.02);
@@ -412,7 +413,9 @@
 
           hVal = (hVal + local * 0.25) % 1;
           sVal = Math.min(1, sVal + local * 0.5);
-          lVal = Math.min(1, lVal + local * 0.4);
+
+          /* DARKEN instead of brighten */
+          lVal = Math.max(0, lVal - local * 0.4);
         }
 
         ctx.fillStyle = `hsl(${(hVal * 360).toFixed(1)}deg, ${(sVal * 100).toFixed(1)}%, ${(lVal * 100).toFixed(1)}%)`;
