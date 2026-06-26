@@ -4,6 +4,21 @@
 
 This folder contains a collection of various HTML pages intended for use as OBS browser sources, background visuals, countdown screens, local previews, and such. All files are stand-alone and contain everything they need inside of them. [Full code repository is available on GitHub.](https://github.com/iamtew/vibes)
 
+## Usage
+
+1. Open any file directly in a browser to preview the effect.
+2. In OBS, add a new Browser Source and point it to the local HTML file path.
+3. Set the source resolution to your target canvas size (for example, `1920x1080`).
+4. Append query parameters to customize speed, colors, title text, and other visual options.
+5. All rights are reserved for these files; use is at your own risk and there is no warranty from the author.
+
+## Notes
+
+- Most files are self-contained with inline CSS and JavaScript.
+- `pixel.html` loads an external pixel font from Google Fonts.
+- `empty.html` is intentionally blank and can be reused as a starter page.
+- `index.html` is an HTML preview of `README.md` and is not generally used as an OBS source.
+
 ## Files Included
 
 ### [`index.html`](index.html)
@@ -88,19 +103,3 @@ This folder contains a collection of various HTML pages intended for use as OBS 
 - Arguments: `?color=` (hex)
 ### [`empty.html`](empty.html)
 - The perfectly blank OBS source. Use it for testing, layering, or when you want empty space to feel intentional.
-
-## Usage
-
-1. Open any file directly in a browser to preview the effect.
-2. In OBS, add a new Browser Source and point it to the local HTML file path.
-3. Set the source resolution to your target canvas size (for example, `1920x1080`).
-4. Append query parameters to customize speed, colors, title text, and other visual options.
-5. All rights are reserved for these files; use is at your own risk and there is no warranty from the author.
-
-## Notes
-
-- Most files are self-contained with inline CSS and JavaScript.
-- `pixel.html` loads an external pixel font from Google Fonts.
-- `empty.html` is intentionally blank and can be reused as a starter page.
-- `index.html` is an HTML preview of `README.md` and is not generally used as an OBS source.
-
