@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>Pixel Fade Matrix</title>
+  <style>
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      background: #000;
+      overflow: hidden;
+      font-family: 'Consolas', monospace;
+    }
+
+    canvas {
+      display: block;
+    }
+
+    /* MENU TOGGLE BUTTON — bottom-left */
+    #menuToggle {
+      position: fixed;
+      bottom: 10px;
+      left: 10px;
+      font-size: 28px;
+      cursor: pointer;
+      z-index: 1000;
+      user-select: none;
+      color: #fff;
+    }
+
+    /* MENU — bottom-left, above button */
+    #controlMenu {
+      position: fixed;
+      bottom: 50px;
+      left: 10px;
+      padding: 12px;
+      background: rgba(0, 0, 0, 0.75);
+      border: 1px solid #f00;
+      border-radius: 6px;
+      color: #fff;
+      z-index: 999;
+      width: 200px;
+      display: none;
+    }
+
+    #controlMenu label {
+      display: block;
+      margin-top: 10px;
+      font-size: 14px;
+    }
+
+    #controlMenu select,
+    #controlMenu input {
+      width: 100%;
+      margin-top: 4px;
+      background: #111;
+      color: #fff;
+      border: 1px solid #444;
+      padding: 4px;
+      border-radius: 4px;
+    }
+
+    /* RESET button */
+    #resetBtn {
+      margin-top: 14px;
+      width: 100%;
+      padding: 6px;
+      background: #400;
+      color: #fff;
+      border: 1px solid #f00;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    #resetBtn:hover {
+      background: #600;
+    }
+  </style>
+</head>
+
+<body>
+  <canvas id="pixel-fade-matrix"></canvas>
+
+  <!-- MENU TOGGLE BUTTON -->
+  <div id="menuToggle"></div>
+
+  <!-- CONTROL MENU -->
+  <div id="controlMenu">
+    <label>Pattern</label>
+    <select id="patternSelect"></select>
+
+    <label>Zoom (cell size)</label>
+    <input type="range" id="cellSizeSlider" min="16" max="80" step="1">
+
+    <label>Speed</label>
+    <input type="range" id="speedSlider" min="0.002" max="0.05" step="0.002">
+
+    <button id="resetBtn">RESET</button>
+  </div>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+
+    // CONFIG
+    let cellSize = Math.max(16, parseInt(params.get("cellSize") || "24", 10));
+    let pattern = params.get("pattern") || "radial";
+    let speed = parseFloat(params.get("speed") || "0.01");
+
+    // MENU STATE
+    const menuParam = (params.get("menu") || "").toUpperCase();
+
+    let menuVisible = menuParam === "ON";
+    let menuOff = menuParam === "OFF";
+    let menuDisabled = menuParam === "DISABLE";
+
+    const menuToggle = document.getElementById("menuToggle");
+    const controlMenu = document.getElementById("controlMenu");
+
+    function updateMenuVisibility() {
+      if (menuDisabled) {
+        // DISABLE → hide everything
+        controlMenu.style.display = "none";
+        menuToggle.style.display = "none";
+        return;
+      }
+
+      if (menuVisible) {
+        controlMenu.style.display = "block";
+        menuToggle.style.display = "block";
+        menuToggle.textContent = "❌"; // close icon
+      } else {
+        controlMenu.style.display = "none";
+        menuToggle.style.display = "block";
+        menuToggle.textContent = "⭕"; // open icon
+      }
+    }
+
+    menuToggle.onclick = () => {
+      if (menuDisabled) return; // ignore clicks when disabled
+
+      menuVisible = !menuVisible;
+      params.set("menu", menuVisible ? "ON" : "OFF");
+      history.replaceState({}, "", "?" + params.toString());
+      updateMenuVisibility();
+    };
+
+    // CANVAS + RENDERER
+    const canvas = document.getElementById("pixel-fade-matrix");
+    const ctx = canvas.getContext("2d");
+
+    let w, h, cols, rows;
+    let time = 0;
+
+    function resize() {
+      w = canvas.width = window.innerWidth;
+      h = canvas.height = window.innerHeight;
+
+      cols = Math.ceil(w / cellSize);
+      rows = Math.ceil(h / cellSize);
+    }
+
+    window.addEventListener("resize", resize);
+    resize();
+
+    function lerp(a, b, t) {
+      return a + (b - a) * t;
+    }
+
+    // ============================
+    // PHASE ENGINE
+    // ============================
+    function getPhase(x, y, t) {
+      switch (pattern) {
+        case "linear": return x * 0.35 + t * 3;
+        case "diagonal": return (x + y) * 0.25 + t * 3;
+        case "noise": return Math.sin(x * 0.3 + t * 2) + Math.sin(y * 0.5 + t * 1.5);
+        case "pulse": return t * 4 + Math.sin(x * 0.3 + t) * 1.5 + Math.sin(y * 0.25 - t * 0.5) * 1.5;
+        case "turbulence": return Math.sin(x * 0.15 + t * 1.5) * 2 + Math.sin(y * 0.22 - t * 1.2) * 2 + Math.sin((x + y) * 0.1 + t * 0.7) * 2;
+        case "helix": return Math.sin(x * 0.25 + t * 3) + Math.sin((y + x) * 0.15 - t * 2);
+        case "flow": return Math.sin(x * 0.12 + t * 1.5) * 2 + Math.sin(y * 0.18 - t * 1.2) * 2;
+        case "weave": return Math.sin(x * 0.25 + t * 2) + Math.sin(y * 0.35 - t * 2.5);
+        case "checkerwarp": return Math.sin((x ^ y) * 0.15 + t * 4);
+        case "fog": return Math.sin(x * 0.1 + t * 0.6) + Math.sin(y * 0.1 - t * 0.4);
+
+        case "radial":
+        default:
+          const dx = x - cols / 2;
+          const dy = y - rows / 2;
+          return Math.sqrt(dx * dx + dy * dy) * 0.25 + t * 2;
+      }
+    }
+
+    // ============================
+    // AUTO-POPULATE PATTERN MENU
+    // ============================
+    function extractPatterns() {
+      const fn = getPhase.toString();
+      const regex = /case\s+"(.*?)"/g;
+      const patterns = [];
+      let match;
+
+      while ((match = regex.exec(fn)) !== null) {
+        patterns.push(match[1]);
+      }
+
+      return patterns;
+    }
+
+    function populatePatternDropdown() {
+      const select = document.getElementById("patternSelect");
+      select.innerHTML = "";
+
+      const patterns = extractPatterns();
+
+      patterns.forEach(p => {
+        const opt = document.createElement("option");
+        opt.value = p;
+        opt.textContent = p;
+        select.appendChild(opt);
+      });
+
+      select.value = pattern;
+    }
+
+    populatePatternDropdown();
+
+    // ============================
+    // INSTANT APPLY HANDLERS
+    // ============================
+    document.getElementById("patternSelect").oninput = (e) => {
+      pattern = e.target.value;
+      params.set("pattern", pattern);
+      history.replaceState({}, "", "?" + params.toString());
+    };
+
+    document.getElementById("cellSizeSlider").value = cellSize;
+    document.getElementById("cellSizeSlider").oninput = (e) => {
+      cellSize = Math.max(16, parseInt(e.target.value));
+      params.set("cellSize", cellSize);
+      history.replaceState({}, "", "?" + params.toString());
+      resize();
+    };
+
+    document.getElementById("speedSlider").value = speed;
+    document.getElementById("speedSlider").oninput = (e) => {
+      speed = parseFloat(e.target.value);
+      params.set("speed", speed);
+      history.replaceState({}, "", "?" + params.toString());
+    };
+
+    // ============================
+    // RESET BUTTON
+    // ============================
+    document.getElementById("resetBtn").onclick = () => {
+      pattern = "radial";
+      cellSize = 24;
+      speed = 0.01;
+
+      document.getElementById("patternSelect").value = pattern;
+      document.getElementById("cellSizeSlider").value = cellSize;
+      document.getElementById("speedSlider").value = speed;
+
+      params.set("pattern", pattern);
+      params.set("cellSize", cellSize);
+      params.set("speed", speed);
+      history.replaceState({}, "", "?" + params.toString());
+
+      resize();
+    };
+
+    updateMenuVisibility();
+
+    // ============================
+    // RENDER LOOP
+    // ============================
+    function drawFrame() {
+      time += speed;
+
+      const img = ctx.createImageData(w, h);
+      const data = img.data;
+
+      for (let gy = 0; gy < rows; gy++) {
+        for (let gx = 0; gx < cols; gx++) {
+
+          const phase = getPhase(gx, gy, time);
+
+          const r = Math.floor(lerp(10, 255, (Math.sin(phase) + 1) / 2));
+          const g = Math.floor(lerp(10, 255, (Math.sin(phase + 2) + 1) / 2));
+          const b = Math.floor(lerp(10, 255, (Math.sin(phase + 4) + 1) / 2));
+
+          const alpha = (Math.sin(phase * 0.7) + 1) / 2 * 0.9;
+          const a = Math.floor(alpha * 255);
+
+          for (let py = 0; py < cellSize; py++) {
+            const y = gy * cellSize + py;
+            if (y >= h) continue;
+
+            for (let px = 0; px < cellSize; px++) {
+              const x = gx * cellSize + px;
+              if (x >= w) continue;
+
+              const idx = (y * w + x) * 4;
+              data[idx] = r;
+              data[idx + 1] = g;
+              data[idx + 2] = b;
+              data[idx + 3] = a;
+            }
+          }
+        }
+      }
+
+      ctx.putImageData(img, 0, 0);
+      requestAnimationFrame(drawFrame);
+    }
+
+    requestAnimationFrame(drawFrame);
+  </script>
+</body>
+
+</html>
