@@ -64,7 +64,7 @@ This folder contains a small collection of HTML pages intended for use as OBS br
 
 ### [`pixel-fade-matrix.html`](pixel-fade-matrix.html)
 - GPU‑friendly pixel‑block animation engine that generates evolving color‑wave patterns using mathematical phase fields rendered through an ImageData grid.
-- Arguments: `?cellSize=` `?pattern=` `?speed=` `?menu=`
+- Arguments: `?cellSize=`, `?pattern=`, `?speed=`, `?menu=`, `?color=`
 
 ### [`retro.html`](retro.html)
 - Retro terminal console with typing animation, perfect for hacker mood lighting and nostalgic UI energy.

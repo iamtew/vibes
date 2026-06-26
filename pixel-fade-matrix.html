@@ -41,7 +41,7 @@
       border-radius: 6px;
       color: #fff;
       z-index: 999;
-      width: 200px;
+      width: 220px;
       display: none;
     }
 
@@ -52,7 +52,8 @@
     }
 
     #controlMenu select,
-    #controlMenu input {
+    #controlMenu input[type="range"],
+    #controlMenu input[type="text"] {
       width: 100%;
       margin-top: 4px;
       background: #111;
@@ -60,6 +61,7 @@
       border: 1px solid #444;
       padding: 4px;
       border-radius: 4px;
+      box-sizing: border-box;
     }
 
     /* RESET button */
@@ -98,6 +100,21 @@
     <label>Speed</label>
     <input type="range" id="speedSlider" min="0.002" max="0.05" step="0.002">
 
+    <label>Color</label>
+    <select id="colorSelect">
+      <option value="default">Default</option>
+      <option value="ff0000">Red</option>
+      <option value="00ff00">Green</option>
+      <option value="0000ff">Blue</option>
+      <option value="ff00ff">Purple</option>
+      <option value="00ffff">Cyan</option>
+      <option value="ffaa00">Orange</option>
+      <option value="ff77aa">Pink</option>
+      <option value="custom">Custom…</option>
+    </select>
+
+    <input type="text" id="customColorInput" placeholder="#RRGGBB" style="display:none; margin-top:6px;">
+
     <button id="resetBtn">RESET</button>
   </div>
 
@@ -108,20 +125,20 @@
     let cellSize = Math.max(16, parseInt(params.get("cellSize") || "24", 10));
     let pattern = params.get("pattern") || "radial";
     let speed = parseFloat(params.get("speed") || "0.01");
+    let baseColor = params.get("color") || null;
 
     // MENU STATE
     const menuParam = (params.get("menu") || "").toUpperCase();
-
     let menuVisible = menuParam === "ON";
-    let menuOff = menuParam === "OFF";
     let menuDisabled = menuParam === "DISABLE";
 
     const menuToggle = document.getElementById("menuToggle");
     const controlMenu = document.getElementById("controlMenu");
+    const colorSelect = document.getElementById("colorSelect");
+    const customColorInput = document.getElementById("customColorInput");
 
     function updateMenuVisibility() {
       if (menuDisabled) {
-        // DISABLE → hide everything
         controlMenu.style.display = "none";
         menuToggle.style.display = "none";
         return;
@@ -139,8 +156,7 @@
     }
 
     menuToggle.onclick = () => {
-      if (menuDisabled) return; // ignore clicks when disabled
-
+      if (menuDisabled) return;
       menuVisible = !menuVisible;
       params.set("menu", menuVisible ? "ON" : "OFF");
       history.replaceState({}, "", "?" + params.toString());
@@ -167,6 +183,122 @@
 
     function lerp(a, b, t) {
       return a + (b - a) * t;
+    }
+
+    // ============================
+    // COLOR ENGINE
+    // ============================
+    let palette = null;
+
+    function hexToRgb(hex) {
+      hex = hex.replace("#", "");
+      if (hex.length === 3) {
+        hex = hex.split("").map(c => c + c).join("");
+      }
+      if (!/^[0-9a-fA-F]{6}$/.test(hex)) return null;
+      const num = parseInt(hex, 16);
+      return {
+        r: (num >> 16) & 255,
+        g: (num >> 8) & 255,
+        b: num & 255
+      };
+    }
+
+    function rgbToHsl(r, g, b) {
+      r /= 255; g /= 255; b /= 255;
+      const max = Math.max(r, g, b), min = Math.min(r, g, b);
+      let h, s, l = (max + min) / 2;
+
+      if (max === min) {
+        h = s = 0;
+      } else {
+        const d = max - min;
+        s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+        switch (max) {
+          case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+          case g: h = (b - r) / d + 2; break;
+          case b: h = (r - g) / d + 4; break;
+        }
+        h *= 60;
+      }
+      return { h, s, l };
+    }
+
+    function hslToRgb(h, s, l) {
+      h /= 360;
+      let r, g, b;
+
+      if (s === 0) {
+        r = g = b = l;
+      } else {
+        const hue2rgb = (p, q, t) => {
+          if (t < 0) t += 1;
+          if (t > 1) t -= 1;
+          if (t < 1 / 6) return p + (q - p) * 6 * t;
+          if (t < 1 / 2) return q;
+          if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+          return p;
+        };
+
+        const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+        const p = 2 * l - q;
+        r = hue2rgb(p, q, h + 1 / 3);
+        g = hue2rgb(p, q, h);
+        b = hue2rgb(p, q, h - 1 / 3);
+      }
+
+      return {
+        r: Math.round(r * 255),
+        g: Math.round(g * 255),
+        b: Math.round(b * 255)
+      };
+    }
+
+    function rotateHue(rgb, deg) {
+      const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
+      hsl.h = (hsl.h + deg) % 360;
+      return hslToRgb(hsl.h, hsl.s, hsl.l);
+    }
+
+    function updatePalette() {
+      if (!baseColor) {
+        palette = null;
+        return;
+      }
+      const rgb = hexToRgb(baseColor);
+      if (!rgb) {
+        palette = null;
+        return;
+      }
+      const accent1 = rotateHue(rgb, 120);
+      const accent2 = rotateHue(rgb, 240);
+      palette = [rgb, accent1, accent2];
+    }
+
+    if (baseColor) {
+      baseColor = baseColor.replace("#", "");
+      updatePalette();
+    }
+
+    function computeColorFromPhase(phase) {
+      if (!palette) {
+        // DEFAULT MODE — original RGB cycling
+        return {
+          r: Math.floor(lerp(10, 255, (Math.sin(phase) + 1) / 2)),
+          g: Math.floor(lerp(10, 255, (Math.sin(phase + 2) + 1) / 2)),
+          b: Math.floor(lerp(10, 255, (Math.sin(phase + 4) + 1) / 2))
+        };
+      }
+
+      const t = (Math.sin(phase) + 1) / 2;
+      const c1 = palette[0];
+      const c2 = palette[1];
+
+      return {
+        r: Math.floor(lerp(c1.r, c2.r, t)),
+        g: Math.floor(lerp(c1.g, c2.g, t)),
+        b: Math.floor(lerp(c1.b, c2.b, t))
+      };
     }
 
     // ============================
@@ -251,6 +383,51 @@
       history.replaceState({}, "", "?" + params.toString());
     };
 
+    // COLOR SELECT INITIAL STATE
+    if (!baseColor) {
+      colorSelect.value = "default";
+    } else {
+      const normalized = baseColor.toLowerCase();
+      const presetValues = ["ff0000", "00ff00", "0000ff", "ff00ff", "00ffff", "ffaa00", "ff77aa"];
+      if (presetValues.includes(normalized)) {
+        colorSelect.value = normalized;
+      } else {
+        colorSelect.value = "custom";
+        customColorInput.style.display = "block";
+        customColorInput.value = "#" + normalized;
+      }
+    }
+
+    colorSelect.oninput = () => {
+      const val = colorSelect.value;
+
+      if (val === "default") {
+        baseColor = null;
+        palette = null;
+        params.delete("color");
+        customColorInput.style.display = "none";
+      } else if (val === "custom") {
+        customColorInput.style.display = "block";
+      } else {
+        baseColor = val;
+        customColorInput.style.display = "none";
+        params.set("color", val);
+        updatePalette();
+      }
+
+      history.replaceState({}, "", "?" + params.toString());
+    };
+
+    customColorInput.oninput = () => {
+      let hex = customColorInput.value.trim().replace("#", "");
+      if (/^[0-9a-fA-F]{6}$/.test(hex)) {
+        baseColor = hex;
+        params.set("color", hex);
+        updatePalette();
+        history.replaceState({}, "", "?" + params.toString());
+      }
+    };
+
     // ============================
     // RESET BUTTON
     // ============================
@@ -258,14 +435,20 @@
       pattern = "radial";
       cellSize = 24;
       speed = 0.01;
+      baseColor = null;
+      palette = null;
 
       document.getElementById("patternSelect").value = pattern;
       document.getElementById("cellSizeSlider").value = cellSize;
       document.getElementById("speedSlider").value = speed;
+      colorSelect.value = "default";
+      customColorInput.style.display = "none";
+      customColorInput.value = "";
 
       params.set("pattern", pattern);
       params.set("cellSize", cellSize);
       params.set("speed", speed);
+      params.delete("color");
       history.replaceState({}, "", "?" + params.toString());
 
       resize();
@@ -286,10 +469,7 @@
         for (let gx = 0; gx < cols; gx++) {
 
           const phase = getPhase(gx, gy, time);
-
-          const r = Math.floor(lerp(10, 255, (Math.sin(phase) + 1) / 2));
-          const g = Math.floor(lerp(10, 255, (Math.sin(phase + 2) + 1) / 2));
-          const b = Math.floor(lerp(10, 255, (Math.sin(phase + 4) + 1) / 2));
+          const { r, g, b } = computeColorFromPhase(phase);
 
           const alpha = (Math.sin(phase * 0.7) + 1) / 2 * 0.9;
           const a = Math.floor(alpha * 255);
