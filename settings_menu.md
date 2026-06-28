@@ -32,3 +32,7 @@ Using these four rules, the menu becomes a reusable system:
 - Add a new parameter → add a UI control → sync it to a URL argument → instant‑apply it.  
 - The menu always stays in sync with the vibe and with the URL.  
 - The user can always share or bookmark the exact configuration.
+
+## Additional menu behavior:
+- menu should use sliders for number ranges
+- menu should always have a reset button
