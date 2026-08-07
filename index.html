@@ -1,9 +1,5 @@
 <!DOCTYPE html>
-<!--
-  index.html: Live preview of README.md designed for browser-based verification.
-  It renders the markdown file inside the page so you can preview OBS assets documentation
-  without leaving the folder.
--->
+
 <html lang="en">
 
 <head>
@@ -12,100 +8,33 @@
   <title>Vibes by tew</title>
   <link rel="stylesheet" href="https://fonts.cdnfonts.com/css/source-code-pro">
   <link rel="stylesheet" href="style.css">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link rel="manifest" href="/site.webmanifest">
 </head>
 
 <body>
   <div id="content"></div>
+
+  <!-- Marked.js Markdown parser.  -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <script>
-    // Markdown rendering helpers for the README preview.
-    function escapeHtml(text) {
-      return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    }
-
-    function renderMarkdown(markdown) {
-      const lines = markdown.split('\n');
-      const html = [];
-      let listType = null;
-      let paragraph = [];
-
-      function flushParagraph() {
-        if (paragraph.length === 0) return;
-        html.push('<p>' + paragraph.join(' ') + '</p>');
-        paragraph = [];
-      }
-
-      function flushList() {
-        if (!listType) return;
-        html.push(listType === 'ol' ? '</ol>' : '</ul>');
-        listType = null;
-      }
-
-      function formatInline(text) {
-        text = escapeHtml(text);
-        text = text.replace(/`([^`]+)`/g, '<code>$1</code>');
-        text = text.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
-        text = text.replace(/\*([^*]+)\*/g, '<em>$1</em>');
-        text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
-        return text;
-      }
-
-      for (let line of lines) {
-        const trimmed = line.trim();
-        if (!trimmed) {
-          flushParagraph();
-          flushList();
-          continue;
-        }
-
-        const headingMatch = trimmed.match(/^(#{1,6})\s+(.*)$/);
-        const unorderedMatch = trimmed.match(/^[-*+]\s+(.*)$/);
-        const orderedMatch = trimmed.match(/^\d+[.)]\s+(.*)$/);
-
-        if (headingMatch) {
-          flushParagraph();
-          flushList();
-          const level = headingMatch[1].length;
-          const text = formatInline(headingMatch[2]);
-          html.push('<h' + level + '>' + text + '</h' + level + '>');
-          continue;
-        }
-
-        if (unorderedMatch || orderedMatch) {
-          flushParagraph();
-          const targetType = orderedMatch ? 'ol' : 'ul';
-          if (listType !== targetType) {
-            flushList();
-            html.push(targetType === 'ol' ? '<ol>' : '<ul>');
-            listType = targetType;
-          }
-          html.push('<li>' + formatInline((orderedMatch || unorderedMatch)[1]) + '</li>');
-          continue;
-        }
-
-        paragraph.push(formatInline(trimmed));
-      }
-
-      flushParagraph();
-      flushList();
-      return html.join('\n');
-    }
-
     function renderText(text) {
-      document.getElementById('content').innerHTML = renderMarkdown(text);
+      // Render markdown into the content div
+      document.getElementById('content').innerHTML = marked.parse(text);
     }
 
     function loadFallback() {
-      document.getElementById('content').innerHTML = '<h1>README not found</h1><p>System says: 404, but your markdown is the real missing dependency.</p>';
+      document.getElementById('content').innerHTML =
+        '<h1>README not found</h1><p>System says: 404, but your markdown is the real missing dependency.</p>';
     }
 
     fetch('README.md')
       .then(response => response.ok ? response.text() : Promise.reject())
-      .then(text => {
-        renderText(text);
-      })
-      .catch(() => {
-        loadFallback();
-      });
+      .then(text => renderText(text))
+      .catch(loadFallback);
   </script>
 </body>
 

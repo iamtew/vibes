@@ -1,8 +1,17 @@
-# Vibes by tew
+<div class="logo">
+<img src="logo/logo.png" class="img-logo"/> 
+</div>
 
-*You know the vibes!*
+# _You know the vibes!_ 
 
-This folder contains a collection of various HTML pages intended for use as OBS browser sources, background visuals, countdown screens, local previews, and such. All files are stand-alone and contain everything they need inside of them. [Full code repository is available on GitHub.](https://github.com/iamtew/vibes)
+⏴[Browse repository on GitHub](https://github.com/iamtew/vibes)⏵
+
+This repo contains a collection of various HTML pages intended for use as OBS browser sources, background visuals, countdown screens, local previews, and such. All files are stand-alone and contain everything they need inside of them. 
+
+They're called vibes because they give off a certain vibe. And there was some AI assisted vibe coding involved as well. 
+
+Enjoy!
+
 
 ## Usage
 

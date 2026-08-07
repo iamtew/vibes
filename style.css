@@ -2,14 +2,16 @@
 /* Modern, textured, centered dark UI with neon accents and chromatic headings. */
 
 /* === GLOBAL LAYOUT ================================================== */
+@import url('https://fonts.cdnfonts.com/css/better-vcr');
 
 html, body {
   margin: 0;
   min-height: 100vh;
+  overflow-x: hidden;
   background: #0B0714;
   color: #EEDCFF;
-  font-family: "Source Code Pro", monospace;
-  overflow-x: hidden;
+  font-family: 'Better VCR', sans-serif;
+  line-height: 1.33;
 }
 
 /* Center the content container */
@@ -159,6 +161,14 @@ h1, h2, h3, h4, h5, h6 {
     0px 0px 6px rgba(209, 76, 255, 0.6),   /* magenta glow */
     2px 0px 4px rgba(255, 0, 255, 0.35),   /* magenta fringe */
     -2px 0px 4px rgba(0, 255, 255, 0.25);  /* cyan fringe */
+}
+
+.logo {
+  text-align: center;
+}
+
+.img-logo {
+  height: 10rem;
 }
 
 /* === CODE BLOCKS ==================================================== */
