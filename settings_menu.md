@@ -36,3 +36,4 @@ Using these four rules, the menu becomes a reusable system:
 ## Additional menu behavior:
 - menu should use sliders for number ranges
 - menu should always have a reset button
+- should always have two buttons to copy the URL. one as is, and one with `?menu=DISABLE` for easy copy/paste into OBS Browser Source. 
