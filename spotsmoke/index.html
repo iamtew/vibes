@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Spot Smoke</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="preview-backdrop"></div>
+  <canvas id="smoke-canvas"></canvas>
+  <canvas id="overlay-canvas"></canvas>
+
+  <!-- Settings toggle -->
+  <button id="menu-toggle" aria-label="Toggle settings">Settings</button>
+
+  <!-- Settings panel -->
+  <div id="settings-menu">
+    <div class="menu-header">
+      <h2>Spot Smoke Settings</h2>
+      <div class="menu-header-buttons">
+        <button id="flip-side-button" aria-label="Move menu to other side">⇄</button>
+        <button id="close-menu-button" aria-label="Close settings">✕</button>
+      </div>
+    </div>
+
+    <p class="hint">Move the mouse to aim, double‑click anywhere on the page to set the smoke spot.</p>
+
+    <div class="setting-group">
+      <label for="duration-slider"><span>Duration (s)</span></label>
+      <input id="duration-slider" type="range" min="1" max="60" step="1" />
+      <span class="value-label" id="duration-value"></span>
+    </div>
+
+    <div class="setting-group">
+      <label for="intensity-slider"><span>Intensity</span></label>
+      <input id="intensity-slider" type="range" min="1" max="10" step="1" />
+      <span class="value-label" id="intensity-value"></span>
+    </div>
+
+    <div class="setting-group">
+      <label for="lifetime-slider"><span>Lifetime (s)</span></label>
+      <input id="lifetime-slider" type="range" min="1" max="60" step="1" />
+      <span class="value-label" id="lifetime-value"></span>
+    </div>
+
+    <div class="setting-group">
+      <label for="color-input"><span>Smoke color</span></label>
+      <div class="row">
+        <input id="color-input" type="color" />
+        <button id="color-reset-button" class="small-button">Reset color</button>
+      </div>
+    </div>
+
+    <div class="setting-group">
+      <label for="width-slider"><span>Width (px)</span></label>
+      <input id="width-slider" type="range" min="0" max="400" step="5" />
+      <span class="value-label" id="width-value"></span>
+    </div>
+
+    <div class="setting-group">
+      <label for="turbulence-slider"><span>Turbulence</span></label>
+      <input id="turbulence-slider" type="range" min="0" max="100" step="1" />
+      <span class="value-label" id="turbulence-value"></span>
+    </div>
+
+    <button id="test-button">Test smoke</button>
+    <button id="reset-button">Reset settings</button>
+
+    <div class="setting-group">
+      <button id="copy-url-button" class="small-button">Copy URL</button>
+      <button id="copy-url-obs-button" class="small-button">Copy URL for OBS</button>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
