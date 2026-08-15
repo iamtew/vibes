@@ -14,8 +14,8 @@ html, body {
 
 body {
     background: repeating-conic-gradient(
-        rgba(0,255,255,0.25) 0% 25%,
-        rgba(255,0,255,0.25) 0% 50%
+        rgba(0,255,255,0.33) 0% 25%,
+        rgba(255,0,255,0.33) 0% 50%
     ) 0 0 / 40px 40px;
 }
 
@@ -23,7 +23,7 @@ body {
     position: absolute;
     top: 20px;
     left: 20px;
-    background: rgba(17,17,17,0.75);
+    background: rgba(17,17,17,0.85);
     padding: 20px;
     border-radius: 8px;
     width: auto;
