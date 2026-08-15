@@ -73,8 +73,9 @@ body {
 }
 
 .smallInfoText {
+    display: block;
     color: #ddd;
-    margin-bottom: 6px;
+    padding-bottom: 0.75em;
 }
 
 .scriptIncludePath {
@@ -84,6 +85,7 @@ body {
     font-style: normal;
     letter-spacing: 0.02em;
     user-select: all;
+    padding-bottom: 0.75em;
 }
 
 .heuristicRow {
@@ -111,6 +113,30 @@ body {
 #obsDetails {
     cursor: pointer;
     text-decoration: underline;
+}
+
+a,
+#obsDetails {
+    color: #d8e4e4;
+    text-decoration: underline;
+    text-decoration-color: rgba(216, 228, 228, 0.65);
+    text-underline-offset: 2px;
+    transition: color 140ms ease, text-shadow 140ms ease, text-decoration-color 140ms ease;
+}
+
+a:visited {
+    color: #d8e4e4;
+}
+
+a:hover,
+a:focus-visible,
+a:active,
+#obsDetails:hover,
+#obsDetails:focus-visible,
+#obsDetails:active {
+    color: #e8ffff;
+    text-decoration-color: #e8ffff;
+    text-shadow: -1px 0 rgba(0, 255, 255, 0.55), 1px 0 rgba(255, 0, 255, 0.55);
 }
 
 hr {
