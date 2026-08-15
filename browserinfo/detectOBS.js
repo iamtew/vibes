@@ -5,7 +5,7 @@
  * OBS (for example, a browser source, overlay, or dashboard project).
  *
  * Example include:
- *   <script src="/path/to/detectOBS.js"></script>
+ *   <script src="https://iamtew.github.io/vibes/browserinfo/detectOBS.js"></script>
  *
  * Example usage:
  *   const isOBS = await insideOBS();
