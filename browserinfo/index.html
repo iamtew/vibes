@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Browser Info</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="infoBox" class="medium">
+        <div class="large">Browser Info</div>
+        <hr>
+
+        <table id="infoTable">
+            <tr><td class="label">User-Agent</td><td class="value" id="ua"></td></tr>
+            <tr><td class="label">Platform</td><td class="value" id="platform"></td></tr>
+            <tr><td class="label">Vendor</td><td class="value" id="vendor"></td></tr>
+            <tr><td class="label">Resolution</td><td class="value" id="res"></td></tr>
+            <tr><td class="label">OBS Detected</td><td class="value" id="obs"></td></tr>
+            <tr><td class="label">OBS Score</td><td class="value" id="obsDetails"></td></tr>
+        </table>
+
+        <div id="heuristicsPanel"></div>
+        <hr>
+        <div id="scriptInfoPanel" class="smallInfoPanel">
+            <div class="smallInfoText">
+                You can include this detector in your own apps with:
+            </div>
+            <div id="scriptIncludePath" class="scriptIncludePath"></div>
+            <div class="smallInfoText">
+                Then check whether the page is running inside OBS:
+            </div>
+            <div class="scriptIncludePath">insideOBS().then(isOBS =&gt; console.log(isOBS));</div>
+        </div>
+    </div>
+
+    <script src="detectOBS.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

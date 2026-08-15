@@ -1,0 +1,120 @@
+@import url('https://fonts.cdnfonts.com/css/better-vcr');
+@import url('https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400&display=swap');
+
+html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    font-family: 'Better VCR', sans-serif;
+    font-size: 1em;
+    color: #eee;
+    overflow: hidden;
+}
+
+body {
+    background:
+        linear-gradient(45deg, rgba(0,255,255,0.25) 25%, transparent 25%) 0 0,
+        linear-gradient(45deg, rgba(255,0,255,0.25) 25%, transparent 25%) 0 0,
+        linear-gradient(45deg, transparent 75%, rgba(0,255,255,0.25) 75%) 0 0,
+        linear-gradient(45deg, transparent 75%, rgba(255,0,255,0.25) 75%) 0 0;
+    background-size: 40px 40px;
+    background-position: 0 0, 20px 20px, 20px 20px, 0 0;
+}
+
+#infoBox {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    background: rgba(17,17,17,0.75);
+    padding: 20px;
+    border-radius: 8px;
+    width: auto;
+    max-width: 520px;
+    line-height: 1.4em;
+}
+
+#infoTable {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+#infoTable td {
+    padding: 2px 10px;
+    vertical-align: top;
+}
+
+#infoTable td.label {
+    font-weight: bold;
+    width: 160px;
+    color: #ccc;
+}
+
+#infoTable td.value {
+    color: #eee;
+}
+
+#heuristicsPanel {
+    margin-top: 10px;
+    padding: 10px;
+    background: rgba(0,0,0,0.35);
+    border-radius: 6px;
+    display: none;
+}
+
+.smallInfoPanel {
+    margin-top: 10px;
+    padding: 10px;
+    background: rgba(0,0,0,0.35);
+    border-radius: 6px;
+    font-size: 0.8em;
+    line-height: 1.5em;
+    word-break: break-word;
+}
+
+.smallInfoText {
+    color: #ddd;
+    margin-bottom: 6px;
+}
+
+.scriptIncludePath {
+    color: #8ceaff;
+    font-family: "Source Code Pro", monospace;
+    font-weight: 400;
+    font-style: normal;
+    letter-spacing: 0.02em;
+    user-select: all;
+}
+
+.heuristicRow {
+    display: flex;
+    justify-content: space-between;
+    padding: 4px 0;
+}
+
+.heuristicLabel {
+    color: #ccc;
+}
+
+.heuristicStatus {
+    font-weight: bold;
+}
+
+.pass {
+    color: #0f0;
+}
+
+.fail {
+    color: #f55;
+}
+
+#obsDetails {
+    cursor: pointer;
+    text-decoration: underline;
+}
+
+hr {
+    border: 0;
+    border-bottom: 1px solid #b8b8b8;
+    margin: 10px 0;
+}
