@@ -4,45 +4,37 @@
 
 # _You know the vibes!_ 
 
-⏴[Browse repository on GitHub](https://github.com/iamtew/vibes)⏵
+⏵⏵ [Browse repository on GitHub](https://github.com/iamtew/vibes/) ⏴⏴
 
-This repo contains a collection of various HTML pages intended for use as OBS browser sources, background visuals, countdown screens, local previews, and such. All files are stand-alone and contain everything they need inside of them. 
-
-They're called vibes because they give off a certain vibe. And there was some AI assisted vibe coding involved as well. 
+This repo contains a collection of various small web apps intended for use as OBS Browser Sources, background visuals, countdown screens, local previews, and such. 
+They're called *vibes* because they give off a certain vibe. And there was some AI assisted coding involved as well, a.k.a. *Vibe Coding.* 
 
 Enjoy!
 
-
 ## Usage
 
-1. Open any file directly in a browser to preview the effect.
+1. Open any link directly in a browser to preview the effect.
 2. In OBS, add a new Browser Source and point it to the local HTML file path.
 3. Set the source resolution to your target canvas size (for example, `1920x1080`).
 4. Append query parameters to customize speed, colors, title text, and other visual options.
 5. All rights are reserved for these files; use is at your own risk and there is no warranty from the author.
 
-## Notes
+## Main Vibes
 
-- Most files are self-contained with inline CSS and JavaScript.
-- `pixel.html` loads an external pixel font from Google Fonts.
-- `empty.html` is intentionally blank and can be reused as a starter page.
-- `index.html` is an HTML preview of `README.md` and is not generally used as an OBS source.
+### [`browserinfo`](browserinfo/)
+- Display browser details.
+- Detect if running inside an OBS Browser Source.
+- OBS detection functions made available to be included in other projects.
 
-## Files Included
+### [`spotsmoke`](spotsmoke/)
+- Pick a spot on the screen and spawn a cloud of smoke there.
+- Smoke characteristics full configurable.
 
-### [`index.html`](index.html)
-- A browser-side concierge that previews this README and helps verify the collection without squinting.
-
-### [`404.html`](404.html)
-- A simple error-style page for browser sources that should return nothing or show a minimal fallback.
-
-### [`clouds.html`](clouds.html)
-- Pixelated vapor blobs drift across an 8-bit sky, giving you weather effects without the meteorologist.
-- Arguments: `?speed=0-10`, `?info=1`
+## Individual Files
 
 ### [`coderain.html`](coderain.html)
 - Chromatic code rain with Japanese characters and alphanumeric digits falling down the screen, creating an immersive digital atmosphere.
-- Arguments: `?color=` (hex or named color), `?speed=`
+- Arguments: `?color=` (hex or named color), `?speed=`.
 
 ### [`field.html`](field.html)
 - A geometric field effect with animated lines and soft motion, good for subtle ambient backgrounds.
@@ -62,60 +54,40 @@ Enjoy!
 - An isometric ripple grid that feels like Douglas Adams designed geometry after tea.
 - Arguments: `?color=#rrggbb` or `?color=rrggbb`, `?tileSize=` (16-256)
 
-### [`kladd.html`](kladd.html)
-- An experimental sketch file with color-shifting patterns and interactive effects—a work in progress for visual experimentation.
-- Arguments: `?color=` (hex)
-
-### [`liner.html`](liner.html)
-- Clean linear waveforms and animated stroke lines, useful for elegant animated overlays.
-
 ### [`gradient.html`](gradient.html)
 - A pulsing radial gradient background that breathes light from the center outward.
-- Arguments: `?color=` (hex or named color, e.g. `#00D9FF`)
+- Arguments: `?color=` (hex or named color, e.g. `#00D9FF`).
 
 ### [`sinewaves.html`](sinewaves.html)
 - Animated CRT-style sine wave field with scanlines and occasional glitch slices.
-- Arguments: `?color=` (hex or named color)
-
-### [`lines.html`](lines.html)
-- Full-screen terminal neon particles streaking across the screen, all motion and ambient glow.
-- No URL arguments supported yet.
+- Arguments: `?color=` (hex or named color).
 
 ### [`matrix.html`](matrix.html)
 - Chromatic code rain with a soft glow, ideal for whenever your stream needs to feel just a little more ominous.
-- Arguments: `?speed=`, `?color=` (hex values like `#64ff64`)
+- Arguments: `?speed=`, `?color=` (hex values like `#64ff64`).
 
 ### [`pixel.html`](pixel.html)
 - Pixel-art “Starting Soon” board with an animated grid and just enough retro swagger.
 
 ### [`pixel-fade-matrix.html`](pixel-fade-matrix.html)
 - GPU‑friendly pixel‑block animation engine that generates evolving color‑wave patterns using mathematical phase fields rendered through an ImageData grid.
-- Arguments: `?cellSize=`, `?pattern=`, `?speed=`, `?menu=`, `?color=`
-
-### [`retro.html`](retro.html)
-- Retro terminal console with typing animation, perfect for hacker mood lighting and nostalgic UI energy.
-- Arguments: `?color=`, `?speed=`
+- Arguments: `?cellSize=`, `?pattern=`, `?speed=`, `?menu=`, `?color=`.
 
 ### [`spacetravel.html`](spacetravel.html)
 - A drifting starfield for people who want to feel like they’re flying through space from the comfort of their desk.
-- Arguments: `?colorSpeed=`, `?pixelated=`, `?dirt=`
+- Arguments: `?colorSpeed=`, `?pixelated=`, `?dirt=`.
 
 ### [`spacetravel2.html`](spacetravel2.html)
 - Full-screen starfield zoom through space with glowing moving stars.
-- Arguments: `?speed=` (recommended range `0.1` to `1.2`)
+- Arguments: `?speed=` (recommended range `0.1` to `1.2`).
 
 ### [`startingsoon.html`](startingsoon.html)
 - Countdown timer page made for dramatic pauses, suspense, and theatrical “almost ready” vibes.
-- Arguments: `?seconds=`, `?title=`
-
-### [`voroni.html`](voroni.html)
-- A Voronoi diagram pulse field with colorful animated polygons that respond to mouse clicks and create dynamic pulsing effects.
-- Arguments: `?color=` (hex)
+- Arguments: `?seconds=`, `?title=`.
 
 ### [`voroni2.html`](voroni2.html)
 - A reactive Voronoi pulse‑field with evolving color palettes, procedural color mode, and edge‑driven glitch bursts that travel along cell boundaries. Includes a settings menu for live control of color, speed, density, glitch intensity, and palette behavior.
-- Arguments: `?color=` (hex), `?palette=procedural`, `?speed=`, `?glitch=`, `?density=`, `?menu=ON|OFF|DISABLE`
+- Arguments: `?color=` (hex), `?palette=procedural`, `?speed=`, `?glitch=`, `?density=`, `?menu=ON|OFF|DISABLE`.
 
 
-### [`empty.html`](empty.html)
-- The perfectly blank OBS source. Use it for testing, layering, or when you want empty space to feel intentional.
+End Of File.
