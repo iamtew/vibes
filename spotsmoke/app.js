@@ -186,6 +186,11 @@ function stopSpawn() {
   testButton.textContent = "Test smoke";
 }
 
+function finishSpawn() {
+  spawning = false;
+  testButton.textContent = "Test smoke";
+}
+
 function spawnParticle() {
   const spot = spotPx();
   const spread = state.width;
@@ -234,7 +239,7 @@ function updateAndDrawSmoke(dt, now) {
         spawnAccumulator -= 1;
       }
     } else {
-      stopSpawn();
+      finishSpawn();
     }
   }
 
