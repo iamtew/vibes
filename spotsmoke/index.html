@@ -11,9 +11,6 @@
   <canvas id="smoke-canvas"></canvas>
   <canvas id="overlay-canvas"></canvas>
 
-  <!-- Settings toggle -->
-  <button id="menu-toggle" aria-label="Toggle settings">Settings</button>
-
   <!-- Settings panel -->
   <div id="settings-menu">
     <div class="menu-header">
@@ -24,48 +21,81 @@
       </div>
     </div>
 
-    <p class="hint">Move the mouse to aim, double‑click anywhere on the page to set the smoke spot.</p>
+    <p class="hint">Double-click the background to set the smoke spot.</p>
 
     <div class="setting-group">
-      <label for="duration-slider"><span>Duration (s)</span></label>
-      <input id="duration-slider" type="range" min="1" max="60" step="1" />
-      <span class="value-label" id="duration-value"></span>
-    </div>
-
-    <div class="setting-group">
-      <label for="intensity-slider"><span>Intensity</span></label>
-      <input id="intensity-slider" type="range" min="1" max="10" step="1" />
-      <span class="value-label" id="intensity-value"></span>
-    </div>
-
-    <div class="setting-group">
-      <label for="lifetime-slider"><span>Lifetime (s)</span></label>
-      <input id="lifetime-slider" type="range" min="1" max="60" step="1" />
-      <span class="value-label" id="lifetime-value"></span>
-    </div>
-
-    <div class="setting-group">
-      <label for="color-input"><span>Smoke color</span></label>
-      <div class="row">
-        <input id="color-input" type="color" />
-        <button id="color-reset-button" class="small-button">Reset color</button>
+      <button id="color-toggle" class="setting-toggle" type="button" aria-expanded="false" aria-controls="color-controls">Smoke color <span id="color-toggle-icon" aria-hidden="true">∇</span></button>
+      <div id="color-controls" hidden>
+        <div id="color-picker" aria-label="Smoke color picker"></div>
+        <div class="row">
+          <input id="color-input" type="text" inputmode="text" maxlength="7" spellcheck="false" aria-label="Smoke color hex value" />
+          <button id="color-reset-button" class="small-button">Reset ඞ</button>
+        </div>
       </div>
     </div>
 
     <div class="setting-group">
-      <label for="width-slider"><span>Width (px)</span></label>
-      <input id="width-slider" type="range" min="0" max="400" step="5" />
-      <span class="value-label" id="width-value"></span>
+      <div class="range-control">
+        <div class="range-details">
+          <label for="duration-slider"><span>Duration (s)</span></label>
+          <div class="range-row">
+            <input id="duration-slider" type="range" min="1" max="60" step="1" />
+          </div>
+        </div>
+        <span class="value-label" id="duration-value"></span>
+      </div>
     </div>
 
     <div class="setting-group">
-      <label for="turbulence-slider"><span>Turbulence</span></label>
-      <input id="turbulence-slider" type="range" min="0" max="100" step="1" />
-      <span class="value-label" id="turbulence-value"></span>
+      <div class="range-control">
+        <div class="range-details">
+          <label for="intensity-slider"><span>Intensity</span></label>
+          <div class="range-row">
+            <input id="intensity-slider" type="range" min="1" max="10" step="1" />
+          </div>
+        </div>
+        <span class="value-label" id="intensity-value"></span>
+      </div>
+    </div>
+
+    <div class="setting-group">
+      <div class="range-control">
+        <div class="range-details">
+          <label for="lifetime-slider"><span>Lifetime (s)</span></label>
+          <div class="range-row">
+            <input id="lifetime-slider" type="range" min="1" max="60" step="1" />
+          </div>
+        </div>
+        <span class="value-label" id="lifetime-value"></span>
+      </div>
+    </div>
+
+    <div class="setting-group">
+      <div class="range-control">
+        <div class="range-details">
+          <label for="width-slider"><span>Width (px)</span></label>
+          <div class="range-row">
+            <input id="width-slider" type="range" min="0" max="400" step="5" />
+          </div>
+        </div>
+        <span class="value-label" id="width-value"></span>
+      </div>
+    </div>
+
+    <div class="setting-group">
+      <div class="range-control">
+        <div class="range-details">
+          <label for="turbulence-slider"><span>Turbulence</span></label>
+          <div class="range-row">
+            <input id="turbulence-slider" type="range" min="0" max="100" step="1" />
+          </div>
+        </div>
+        <span class="value-label" id="turbulence-value"></span>
+      </div>
     </div>
 
     <button id="test-button">Test smoke</button>
-    <button id="reset-button">Reset settings</button>
+    <button id="reset-button">Reset all ඞ</button>
 
     <div class="setting-group">
       <button id="copy-url-button" class="small-button">Copy URL</button>
@@ -73,6 +103,7 @@
     </div>
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/@jaames/iro@5"></script>
   <script src="app.js"></script>
 </body>
 </html>

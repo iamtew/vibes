@@ -9,8 +9,8 @@ const defaults = {
   color: "#d8d8d8",
   width: 60, // px horizontal spread
   turbulence: 30, // 0-100
-  menu: "ON",
-  side: "left" // which screen edge the menu/toggle live on
+  settingsMode: "ON",
+  side: "left" // which screen edge the settings controls live on
 };
 
 const params = new URLSearchParams(location.search);
@@ -28,7 +28,7 @@ let state = {
   color: getParam("color", defaults.color),
   width: parseFloat(getParam("width", defaults.width)),
   turbulence: parseFloat(getParam("turbulence", defaults.turbulence)),
-  menu: getParam("menu", defaults.menu),
+  settingsMode: getParam("menu", defaults.settingsMode) === "DISABLE" ? "DISABLE" : "ON",
   side: getParam("side", defaults.side)
 };
 
@@ -41,10 +41,9 @@ const smokeCtx = smokeCanvas.getContext("2d");
 const overlayCanvas = document.getElementById("overlay-canvas");
 const overlayCtx = overlayCanvas.getContext("2d");
 
-const menuToggle = document.getElementById("menu-toggle");
-const menuEl = document.getElementById("settings-menu");
+const settingsMenu = document.getElementById("settings-menu");
 const flipSideButton = document.getElementById("flip-side-button");
-const closeMenuButton = document.getElementById("close-menu-button");
+const closeSettingsButton = document.getElementById("close-menu-button");
 
 const durationSlider = document.getElementById("duration-slider");
 const durationValue = document.getElementById("duration-value");
@@ -52,6 +51,10 @@ const intensitySlider = document.getElementById("intensity-slider");
 const intensityValue = document.getElementById("intensity-value");
 const lifetimeSlider = document.getElementById("lifetime-slider");
 const lifetimeValue = document.getElementById("lifetime-value");
+const colorToggle = document.getElementById("color-toggle");
+const colorToggleIcon = document.getElementById("color-toggle-icon");
+const colorControls = document.getElementById("color-controls");
+const colorPickerEl = document.getElementById("color-picker");
 const colorInput = document.getElementById("color-input");
 const colorResetButton = document.getElementById("color-reset-button");
 const widthSlider = document.getElementById("width-slider");
@@ -63,6 +66,36 @@ const resetButton = document.getElementById("reset-button");
 const copyUrlButton = document.getElementById("copy-url-button");
 const copyUrlObsButton = document.getElementById("copy-url-obs-button");
 
+colorToggle.addEventListener("click", () => {
+  colorControls.hidden = !colorControls.hidden;
+  colorToggle.setAttribute("aria-expanded", String(!colorControls.hidden));
+  colorToggleIcon.textContent = colorControls.hidden ? "∇" : "∆";
+});
+
+let colorPicker = null;
+
+if (window.iro && colorPickerEl) {
+  colorPicker = new iro.ColorPicker(colorPickerEl, {
+    width: 220,
+    color: state.color,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.3)",
+    layoutDirection: "vertical",
+    sliderSize: 14,
+    handleRadius: 8,
+    padding: 4,
+    margin: 8
+  });
+
+  colorPicker.on("color:change", color => {
+    state.color = color.hexString.toLowerCase();
+    colorInput.value = state.color;
+    updateURL();
+  });
+} else if (colorPickerEl) {
+  colorPickerEl.hidden = true;
+}
+
 // --- COLOR UTILS --------------------------------------------------------
 
 function hexToRgb(hex) {
@@ -70,6 +103,23 @@ function hexToRgb(hex) {
   if (hex.length === 3) hex = hex.split("").map(c => c + c).join("");
   const n = parseInt(hex, 16);
   return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
+}
+
+let cachedRgbColor = null;
+let cachedRgb = null;
+
+function getCachedRgb(color) {
+  if (cachedRgbColor !== color) {
+    cachedRgbColor = color;
+    cachedRgb = hexToRgb(color);
+  }
+  return cachedRgb;
+}
+
+function syncColorPicker(color) {
+  if (colorPicker && colorPicker.color.hexString !== color) {
+    colorPicker.color.hexString = color;
+  }
 }
 
 // --- CANVAS SETUP --------------------------------------------------------
@@ -103,6 +153,13 @@ function startSpawn() {
   spawning = true;
   spawnStart = performance.now();
   spawnAccumulator = 0;
+  testButton.textContent = "Stop smoke";
+}
+
+function stopSpawn() {
+  spawning = false;
+  particles = [];
+  testButton.textContent = "Test smoke";
 }
 
 function spawnParticle() {
@@ -153,11 +210,11 @@ function updateAndDrawSmoke(dt, now) {
         spawnAccumulator -= 1;
       }
     } else {
-      spawning = false;
+      stopSpawn();
     }
   }
 
-  const rgb = hexToRgb(state.color);
+  const rgb = getCachedRgb(state.color);
   const baseAlpha = 0.12 + (state.intensity / 10) * 0.28;
 
   particles = particles.filter(p => p.age < p.life);
@@ -213,7 +270,7 @@ function drawCrosshair(ctx, x, y, color) {
   ctx.save();
   ctx.strokeStyle = color;
   ctx.fillStyle = color;
-  ctx.lineWidth = 1;
+  ctx.lineWidth = 3;
   ctx.font = "11px Consolas, monospace";
   ctx.textBaseline = "middle";
 
@@ -225,8 +282,12 @@ function drawCrosshair(ctx, x, y, color) {
   ctx.stroke();
 
   ctx.beginPath();
-  ctx.arc(x, y, 5, 0, Math.PI * 2);
+  ctx.arc(x, y, 14, 0, Math.PI * 2);
   ctx.stroke();
+
+  ctx.beginPath();
+  ctx.arc(x, y, 4, 0, Math.PI * 2);
+  ctx.fill();
 
   const left = Math.round(x);
   const right = Math.round(width - x);
@@ -247,13 +308,13 @@ function drawCrosshair(ctx, x, y, color) {
 
 function drawOverlay() {
   overlayCtx.clearRect(0, 0, width, height);
-  if (state.menu !== "ON") return;
+  if (state.settingsMode !== "ON") return;
 
   const spot = spotPx();
-  drawCrosshair(overlayCtx, spot.x, spot.y, "#f40");
+  drawCrosshair(overlayCtx, spot.x, spot.y, "#ffe600");
 
   if (mouseX !== null && mouseY !== null) {
-    drawCrosshair(overlayCtx, mouseX, mouseY, "#0ff");
+    drawCrosshair(overlayCtx, mouseX, mouseY, "#ffffff");
   }
 }
 
@@ -262,9 +323,17 @@ window.addEventListener("mousemove", e => {
   mouseY = e.clientY;
 });
 
-window.addEventListener("dblclick", e => {
-  if (state.menu !== "ON") return;
-  if (e.target.closest("#settings-menu, #menu-toggle")) return;
+document.addEventListener("click", e => {
+  if (e.detail !== 2) return;
+
+  if (state.settingsMode === "DISABLE") {
+    state.settingsMode = "ON";
+    applySettingsMode();
+    updateURL();
+    return;
+  }
+
+  if (e.target instanceof Element && e.target.closest("#settings-menu")) return;
 
   state.spotX = (e.clientX / width) * 100;
   state.spotY = (e.clientY / height) * 100;
@@ -286,7 +355,7 @@ function loop(ts) {
 }
 requestAnimationFrame(loop);
 
-// --- MENU --------------------------------------------------------------
+// --- SETTINGS MODE -----------------------------------------------------
 
 function updateURL() {
   params.set("spotX", state.spotX.toFixed(2));
@@ -297,30 +366,23 @@ function updateURL() {
   params.set("color", state.color);
   params.set("width", state.width);
   params.set("turbulence", state.turbulence);
-  params.set("menu", state.menu);
+  params.set("menu", state.settingsMode);
   params.set("side", state.side);
   history.replaceState({}, "", "?" + params.toString());
 }
 
-function applyMenuVisibility() {
-  if (state.menu === "DISABLE") {
-    menuToggle.classList.add("hidden");
-    menuEl.classList.remove("open");
-    document.body.classList.remove("menu-open");
-  } else if (state.menu === "ON") {
-    menuToggle.classList.remove("hidden");
-    menuEl.classList.add("open");
-    document.body.classList.add("menu-open");
+function applySettingsMode() {
+  if (state.settingsMode === "DISABLE") {
+    settingsMenu.classList.remove("open");
+    document.body.classList.remove("settings-mode");
   } else {
-    menuToggle.classList.remove("hidden");
-    menuEl.classList.remove("open");
-    document.body.classList.remove("menu-open");
+    settingsMenu.classList.add("open");
+    document.body.classList.add("settings-mode");
   }
 }
 
 function applySide() {
-  menuToggle.classList.toggle("side-right", state.side === "right");
-  menuEl.classList.toggle("side-right", state.side === "right");
+  settingsMenu.classList.toggle("side-right", state.side === "right");
 }
 
 function syncInputs() {
@@ -335,6 +397,7 @@ function syncInputs() {
   lifetimeValue.textContent = `${state.lifetime}s`;
 
   colorInput.value = state.color;
+  syncColorPicker(state.color);
 
   widthSlider.value = state.width;
   widthValue.textContent = `${state.width}px`;
@@ -343,22 +406,15 @@ function syncInputs() {
   turbulenceValue.textContent = state.turbulence;
 }
 
-menuToggle.addEventListener("click", () => {
-  if (state.menu === "DISABLE") return;
-  state.menu = state.menu === "ON" ? "OFF" : "ON";
-  applyMenuVisibility();
-  updateURL();
-});
-
 flipSideButton.addEventListener("click", () => {
   state.side = state.side === "left" ? "right" : "left";
   applySide();
   updateURL();
 });
 
-closeMenuButton.addEventListener("click", () => {
-  state.menu = "OFF";
-  applyMenuVisibility();
+closeSettingsButton.addEventListener("click", () => {
+  state.settingsMode = "DISABLE";
+  applySettingsMode();
   updateURL();
 });
 
@@ -382,7 +438,10 @@ lifetimeSlider.addEventListener("input", e => {
 });
 
 colorInput.addEventListener("input", e => {
-  state.color = e.target.value;
+  const color = e.target.value.trim();
+  if (!/^#[\da-f]{6}$/i.test(color)) return;
+  state.color = color.toLowerCase();
+  syncColorPicker(state.color);
   updateURL();
 });
 
@@ -405,13 +464,17 @@ turbulenceSlider.addEventListener("input", e => {
 });
 
 testButton.addEventListener("click", () => {
-  startSpawn();
+  if (spawning) {
+    stopSpawn();
+  } else {
+    startSpawn();
+  }
 });
 
 resetButton.addEventListener("click", () => {
   state = { ...defaults };
   syncInputs();
-  applyMenuVisibility();
+  applySettingsMode();
   applySide();
   updateURL();
 });
@@ -429,7 +492,7 @@ copyUrlObsButton.addEventListener("click", () => {
 // --- INIT --------------------------------------------------------------
 
 syncInputs();
-applyMenuVisibility();
+applySettingsMode();
 applySide();
 
 setTimeout(() => {
