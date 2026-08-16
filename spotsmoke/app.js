@@ -7,6 +7,7 @@ const defaults = {
   intensity: 5, // 1-10
   lifetime: 4, // seconds per particle, capped at duration
   color: "#d8d8d8",
+  size: 1,
   width: 60, // px horizontal spread
   turbulence: 30, // 0-100
   settingsMode: "ON",
@@ -26,6 +27,7 @@ let state = {
   intensity: parseFloat(getParam("intensity", defaults.intensity)),
   lifetime: parseFloat(getParam("lifetime", defaults.lifetime)),
   color: getParam("color", defaults.color),
+  size: parseFloat(getParam("size", defaults.size)),
   width: parseFloat(getParam("width", defaults.width)),
   turbulence: parseFloat(getParam("turbulence", defaults.turbulence)),
   settingsMode: getParam("menu", defaults.settingsMode) === "DISABLE" ? "DISABLE" : "ON",
@@ -60,6 +62,8 @@ const colorControls = document.getElementById("color-controls");
 const colorPickerEl = document.getElementById("color-picker");
 const colorInput = document.getElementById("color-input");
 const colorResetButton = document.getElementById("color-reset-button");
+const sizeSlider = document.getElementById("size-slider");
+const sizeValue = document.getElementById("size-value");
 const widthSlider = document.getElementById("width-slider");
 const widthValue = document.getElementById("width-value");
 const turbulenceSlider = document.getElementById("turbulence-slider");
@@ -217,8 +221,8 @@ function spawnParticle() {
     swayAmp: spread * (0.3 + Math.random() * 0.5) * (0.3 + turb),
     driftX: (Math.random() - 0.5) * turb * 20,
     riseSpeed: 18 + Math.random() * 14 + turb * 20,
-    startSize: 4 + Math.random() * 4,
-    maxSize: 30 + spread * 0.25 + Math.random() * 20,
+    startSize: (4 + Math.random() * 4) * state.size,
+    maxSize: (30 + spread * 0.25 + Math.random() * 20) * state.size,
     rotationSpeed: (Math.random() - 0.5) * 1.2 * (0.3 + turb),
     puffs,
     age: 0,
@@ -393,6 +397,7 @@ function updateURL() {
   params.set("intensity", state.intensity);
   params.set("lifetime", state.lifetime);
   params.set("color", state.color);
+  params.set("size", state.size);
   params.set("width", state.width);
   params.set("turbulence", state.turbulence);
   params.set("menu", state.settingsMode);
@@ -427,6 +432,9 @@ function syncInputs() {
 
   colorInput.value = state.color;
   syncColorPicker(state.color);
+
+  sizeSlider.value = state.size;
+  sizeValue.textContent = `${state.size.toFixed(2)}x`;
 
   widthSlider.value = state.width;
   widthValue.textContent = `${state.width}px`;
@@ -476,6 +484,18 @@ colorInput.addEventListener("input", e => {
 
 colorResetButton.addEventListener("click", () => {
   state.color = defaults.color;
+  syncInputs();
+  updateURL();
+});
+
+sizeSlider.addEventListener("input", e => {
+  const nextSize = parseFloat(e.target.value);
+  const scale = nextSize / state.size;
+  for (const particle of particles) {
+    particle.startSize *= scale;
+    particle.maxSize *= scale;
+  }
+  state.size = nextSize;
   syncInputs();
   updateURL();
 });
