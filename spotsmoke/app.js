@@ -197,7 +197,7 @@ function finishSpawn() {
 
 function spawnParticle() {
   const spot = spotPx();
-  const spread = state.width;
+  const spread = state.width * state.size;
   const turb = state.turbulence / 100;
 
   // each particle is a small cluster of puffs, giving the cloud a mottled, billowy texture
@@ -219,10 +219,10 @@ function spawnParticle() {
     seed: Math.random() * 1000,
     swayFreq: 0.4 + Math.random() * 0.6 + turb * 1.5,
     swayAmp: spread * (0.3 + Math.random() * 0.5) * (0.3 + turb),
-    driftX: (Math.random() - 0.5) * turb * 20,
+    driftX: (Math.random() - 0.5) * turb * 20 * state.size,
     riseSpeed: 18 + Math.random() * 14 + turb * 20,
     startSize: (4 + Math.random() * 4) * state.size,
-    maxSize: (30 + spread * 0.25 + Math.random() * 20) * state.size,
+    maxSize: (30 + state.width * 0.25 + Math.random() * 20) * state.size,
     rotationSpeed: (Math.random() - 0.5) * 1.2 * (0.3 + turb),
     puffs,
     age: 0,
