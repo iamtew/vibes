@@ -24,86 +24,91 @@
 
     <p class="hint">Double-click the background to set the smoke spot.</p>
 
-    <div class="setting-group">
-      <button id="color-toggle" class="setting-toggle" type="button" aria-expanded="false" aria-controls="color-controls">Smoke color <span id="color-toggle-icon" aria-hidden="true">∇</span></button>
-      <div id="color-controls" hidden>
+    <div class="settings-section" data-section="color">
+      <button id="color-toggle" class="setting-toggle" type="button" aria-expanded="false" aria-controls="color-controls" data-section-toggle>Smoke color <span id="color-toggle-icon" class="section-toggle-icon" aria-hidden="true">∇</span></button>
+      <div id="color-controls" class="section-panel" hidden>
         <div id="color-picker" aria-label="Smoke color picker"></div>
         <div class="row">
           <input id="color-input" type="text" inputmode="text" maxlength="7" spellcheck="false" aria-label="Smoke color hex value" />
-          <button id="color-reset-button" class="small-button">Reset ඞ</button>
+          <button id="color-reset-button" class="small-button">Reset Color ඞ</button>
         </div>
       </div>
     </div>
 
-    <div class="setting-group">
-      <div class="range-control">
-        <div class="range-details">
-          <label for="size-slider"><span>Size</span></label>
-          <div class="range-row">
-            <input id="size-slider" type="range" min="0.25" max="4" step="0.05" />
+    <div class="settings-section" data-section="shape">
+      <button id="shape-toggle" class="setting-toggle" type="button" aria-expanded="true" aria-controls="shape-controls" data-section-toggle>Smoke shape <span id="shape-toggle-icon" class="section-toggle-icon" aria-hidden="true">∆</span></button>
+      <div id="shape-controls" class="section-panel">
+        <div class="setting-group">
+          <div class="range-control">
+            <div class="range-details">
+              <label for="size-slider"><span>Size</span></label>
+              <div class="range-row">
+                <input id="size-slider" type="range" min="0.25" max="4" step="0.05" />
+              </div>
+            </div>
+            <span class="value-label" id="size-value"></span>
           </div>
         </div>
-        <span class="value-label" id="size-value"></span>
-      </div>
-    </div>
 
-    <div class="setting-group">
-      <div class="range-control">
-        <div class="range-details">
-          <label for="duration-slider"><span>Duration (s)</span></label>
-          <div class="range-row">
-            <input id="duration-slider" type="range" min="1" max="60" step="1" />
+        <div class="setting-group">
+          <div class="range-control">
+            <div class="range-details">
+              <label for="duration-slider"><span>Duration (s)</span></label>
+              <div class="range-row">
+                <input id="duration-slider" type="range" min="1" max="60" step="1" />
+              </div>
+            </div>
+            <span class="value-label" id="duration-value"></span>
           </div>
         </div>
-        <span class="value-label" id="duration-value"></span>
-      </div>
-    </div>
 
-    <div class="setting-group">
-      <div class="range-control">
-        <div class="range-details">
-          <label for="intensity-slider"><span>Intensity</span></label>
-          <div class="range-row">
-            <input id="intensity-slider" type="range" min="1" max="10" step="1" />
+        <div class="setting-group">
+          <div class="range-control">
+            <div class="range-details">
+              <label for="intensity-slider"><span>Intensity</span></label>
+              <div class="range-row">
+                <input id="intensity-slider" type="range" min="1" max="10" step="1" />
+              </div>
+            </div>
+            <span class="value-label" id="intensity-value"></span>
           </div>
         </div>
-        <span class="value-label" id="intensity-value"></span>
-      </div>
-    </div>
 
-    <div class="setting-group">
-      <div class="range-control">
-        <div class="range-details">
-          <label for="lifetime-slider"><span>Lifetime (s)</span></label>
-          <div class="range-row">
-            <input id="lifetime-slider" type="range" min="1" max="60" step="1" />
+        <div class="setting-group">
+          <div class="range-control">
+            <div class="range-details">
+              <label for="lifetime-slider"><span>Lifetime (s)</span></label>
+              <div class="range-row">
+                <input id="lifetime-slider" type="range" min="1" max="60" step="1" />
+              </div>
+            </div>
+            <span class="value-label" id="lifetime-value"></span>
           </div>
         </div>
-        <span class="value-label" id="lifetime-value"></span>
-      </div>
-    </div>
 
-    <div class="setting-group">
-      <div class="range-control">
-        <div class="range-details">
-          <label for="width-slider"><span>Width (px)</span></label>
-          <div class="range-row">
-            <input id="width-slider" type="range" min="0" max="400" step="5" />
+        <div class="setting-group">
+          <div class="range-control">
+            <div class="range-details">
+              <label for="width-slider"><span>Width (px)</span></label>
+              <div class="range-row">
+                <input id="width-slider" type="range" min="0" max="400" step="5" />
+              </div>
+            </div>
+            <span class="value-label" id="width-value"></span>
           </div>
         </div>
-        <span class="value-label" id="width-value"></span>
-      </div>
-    </div>
 
-    <div class="setting-group">
-      <div class="range-control">
-        <div class="range-details">
-          <label for="turbulence-slider"><span>Turbulence</span></label>
-          <div class="range-row">
-            <input id="turbulence-slider" type="range" min="0" max="100" step="1" />
+        <div class="setting-group">
+          <div class="range-control">
+            <div class="range-details">
+              <label for="turbulence-slider"><span>Turbulence</span></label>
+              <div class="range-row">
+                <input id="turbulence-slider" type="range" min="0" max="100" step="1" />
+              </div>
+            </div>
+            <span class="value-label" id="turbulence-value"></span>
           </div>
         </div>
-        <span class="value-label" id="turbulence-value"></span>
       </div>
     </div>
 

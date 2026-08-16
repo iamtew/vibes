@@ -56,9 +56,7 @@ const intensitySlider = document.getElementById("intensity-slider");
 const intensityValue = document.getElementById("intensity-value");
 const lifetimeSlider = document.getElementById("lifetime-slider");
 const lifetimeValue = document.getElementById("lifetime-value");
-const colorToggle = document.getElementById("color-toggle");
-const colorToggleIcon = document.getElementById("color-toggle-icon");
-const colorControls = document.getElementById("color-controls");
+const sectionToggles = document.querySelectorAll("[data-section-toggle]");
 const colorPickerEl = document.getElementById("color-picker");
 const colorInput = document.getElementById("color-input");
 const colorResetButton = document.getElementById("color-reset-button");
@@ -94,11 +92,23 @@ document.addEventListener("keydown", event => {
   if (event.key === "Escape" && !helpOverlay.hidden) closeHelpOverlay();
 });
 
-colorToggle.addEventListener("click", () => {
-  colorControls.hidden = !colorControls.hidden;
-  colorToggle.setAttribute("aria-expanded", String(!colorControls.hidden));
-  colorToggleIcon.textContent = colorControls.hidden ? "∇" : "∆";
-});
+function setOpenSection(section) {
+  for (const toggle of sectionToggles) {
+    const panel = document.getElementById(toggle.getAttribute("aria-controls"));
+    const isOpen = toggle.closest("[data-section]") === section;
+    toggle.setAttribute("aria-expanded", String(isOpen));
+    toggle.querySelector(".section-toggle-icon").textContent = isOpen ? "∆" : "∇";
+    panel.hidden = !isOpen;
+  }
+}
+
+for (const toggle of sectionToggles) {
+  toggle.addEventListener("click", () => {
+    setOpenSection(toggle.closest("[data-section]"));
+  });
+}
+
+setOpenSection(document.querySelector('[data-section="shape"]'));
 
 let colorPicker = null;
 
