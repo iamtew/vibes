@@ -231,6 +231,40 @@ body.settings-mode #overlay-canvas {
   display: none;
 }
 
+.effect-control {
+  margin-bottom: 0.75rem;
+}
+
+.effect-control:last-child {
+  margin-bottom: 0;
+}
+
+.switch-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.4rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.switch-row input {
+  accent-color: var(--accent);
+}
+
+.effect-control input[type="range"]:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.effect-control .value-label {
+  transition: opacity 0.15s ease;
+}
+
+.effect-control:has(input[type="checkbox"]:not(:checked)) .value-label {
+  opacity: 0.4;
+}
+
 .setting-group label span {
   font-weight: 600;
 }

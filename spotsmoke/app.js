@@ -10,6 +10,12 @@ const defaults = {
   size: 1,
   width: 60, // px horizontal spread
   turbulence: 30, // 0-100
+  pixelationEnabled: false,
+  pixelCellSize: 8,
+  glitchEnabled: false,
+  glitchIntensity: 0,
+  glitchFrequency: 2,
+  glitchFringe: 0,
   settingsMode: "ON",
   side: "left" // which screen edge the settings controls live on
 };
@@ -18,6 +24,15 @@ const params = new URLSearchParams(location.search);
 
 function getParam(key, fallback) {
   return params.has(key) ? params.get(key) : fallback;
+}
+
+function getBooleanParam(key, fallback) {
+  return params.has(key) ? params.get(key) === "true" : fallback;
+}
+
+function getNumberParam(key, fallback) {
+  const value = Number.parseFloat(getParam(key, fallback));
+  return Number.isFinite(value) ? value : fallback;
 }
 
 let state = {
@@ -30,6 +45,12 @@ let state = {
   size: parseFloat(getParam("size", defaults.size)),
   width: parseFloat(getParam("width", defaults.width)),
   turbulence: parseFloat(getParam("turbulence", defaults.turbulence)),
+  pixelationEnabled: getBooleanParam("pixelation", defaults.pixelationEnabled),
+  pixelCellSize: getNumberParam("pixelSize", defaults.pixelCellSize),
+  glitchEnabled: getBooleanParam("glitch", defaults.glitchEnabled),
+  glitchIntensity: getNumberParam("glitchIntensity", defaults.glitchIntensity),
+  glitchFrequency: getNumberParam("glitchFrequency", defaults.glitchFrequency),
+  glitchFringe: getNumberParam("glitchFringe", defaults.glitchFringe),
   settingsMode: getParam("menu", defaults.settingsMode) === "DISABLE" ? "DISABLE" : "ON",
   side: getParam("side", defaults.side)
 };
@@ -42,6 +63,8 @@ const smokeCanvas = document.getElementById("smoke-canvas");
 const smokeCtx = smokeCanvas.getContext("2d");
 const overlayCanvas = document.getElementById("overlay-canvas");
 const overlayCtx = overlayCanvas.getContext("2d");
+const pixelCanvas = document.createElement("canvas");
+const pixelCtx = pixelCanvas.getContext("2d");
 
 const settingsMenu = document.getElementById("settings-menu");
 const helpButton = document.getElementById("help-button");
@@ -66,6 +89,16 @@ const widthSlider = document.getElementById("width-slider");
 const widthValue = document.getElementById("width-value");
 const turbulenceSlider = document.getElementById("turbulence-slider");
 const turbulenceValue = document.getElementById("turbulence-value");
+const pixelationToggle = document.getElementById("pixelation-toggle");
+const pixelCellSizeSlider = document.getElementById("pixel-cell-size-slider");
+const pixelCellSizeValue = document.getElementById("pixel-cell-size-value");
+const glitchToggle = document.getElementById("glitch-toggle");
+const glitchIntensitySlider = document.getElementById("glitch-intensity-slider");
+const glitchIntensityValue = document.getElementById("glitch-intensity-value");
+const glitchFrequencySlider = document.getElementById("glitch-frequency-slider");
+const glitchFrequencyValue = document.getElementById("glitch-frequency-value");
+const glitchFringeSlider = document.getElementById("glitch-fringe-slider");
+const glitchFringeValue = document.getElementById("glitch-fringe-value");
 const testButton = document.getElementById("test-button");
 const resetButton = document.getElementById("reset-button");
 const copyUrlButton = document.getElementById("copy-url-button");
@@ -100,6 +133,15 @@ function setOpenSection(section) {
     toggle.querySelector(".section-toggle-icon").textContent = isOpen ? "∆" : "∇";
     panel.hidden = !isOpen;
   }
+}
+
+function syncEffectsEnabled() {
+  pixelationToggle.checked = state.pixelationEnabled;
+  pixelCellSizeSlider.disabled = !state.pixelationEnabled;
+  glitchToggle.checked = state.glitchEnabled;
+  glitchIntensitySlider.disabled = !state.glitchEnabled;
+  glitchFrequencySlider.disabled = !state.glitchEnabled;
+  glitchFringeSlider.disabled = !state.glitchEnabled;
 }
 
 for (const toggle of sectionToggles) {
@@ -174,6 +216,28 @@ function resizeCanvases() {
 }
 resizeCanvases();
 window.addEventListener("resize", resizeCanvases);
+
+function applyPixelation() {
+  if (!state.pixelationEnabled || !Number.isFinite(state.pixelCellSize) || state.pixelCellSize <= 1) return;
+
+  const cellSize = state.pixelCellSize;
+  const pixelWidth = Math.max(1, Math.ceil(width / cellSize));
+  const pixelHeight = Math.max(1, Math.ceil(height / cellSize));
+
+  if (pixelCanvas.width !== pixelWidth || pixelCanvas.height !== pixelHeight) {
+    pixelCanvas.width = pixelWidth;
+    pixelCanvas.height = pixelHeight;
+  }
+
+  pixelCtx.clearRect(0, 0, pixelWidth, pixelHeight);
+  pixelCtx.imageSmoothingEnabled = false;
+  pixelCtx.drawImage(smokeCanvas, 0, 0, pixelWidth, pixelHeight);
+
+  smokeCtx.clearRect(0, 0, width, height);
+  smokeCtx.imageSmoothingEnabled = false;
+  smokeCtx.drawImage(pixelCanvas, 0, 0, width, height);
+  smokeCtx.imageSmoothingEnabled = true;
+}
 
 function spotPx() {
   return { x: (state.spotX / 100) * width, y: (state.spotY / 100) * height };
@@ -279,6 +343,20 @@ function updateAndDrawSmoke(dt, now) {
     if (alpha <= 0.002) continue;
 
     const rotation = p.age * p.rotationSpeed;
+    let glitchX = 0;
+    let glitchY = 0;
+    const glitchIntensity = Number.isFinite(state.glitchIntensity)
+      ? Math.max(0, state.glitchIntensity)
+      : 0;
+    const glitchFrequency = Number.isFinite(state.glitchFrequency)
+      ? Math.max(0, state.glitchFrequency)
+      : 0;
+    if (state.glitchEnabled && glitchIntensity > 0 && glitchFrequency > 0) {
+      const glitchStep = Math.floor((now / 1000) * glitchFrequency);
+      const glitchSeed = p.seed + glitchStep * 97.31;
+      glitchX = (Math.sin(glitchSeed * 12.9898) * 0.5) * glitchIntensity;
+      glitchY = (Math.sin(glitchSeed * 78.233) * 0.5) * glitchIntensity;
+    }
 
     for (const puff of p.puffs) {
       // two out-of-phase sine waves fake turbulent noise in each puff's density and size
@@ -286,8 +364,8 @@ function updateAndDrawSmoke(dt, now) {
         0.15 * Math.sin(p.age * puff.freq * 1.7 + puff.phase * 1.3);
 
       const puffDist = puff.dist * size * 0.55;
-      const px = p.x + Math.cos(puff.angle + rotation) * puffDist;
-      const py = p.y + Math.sin(puff.angle + rotation) * puffDist * 0.7;
+      const px = p.x + glitchX + Math.cos(puff.angle + rotation) * puffDist;
+      const py = p.y + glitchY + Math.sin(puff.angle + rotation) * puffDist * 0.7;
       const puffSize = Math.max(1, size * puff.sizeMul * noise);
       const puffAlpha = Math.max(0, alpha * (0.55 + 0.45 * noise));
 
@@ -300,8 +378,44 @@ function updateAndDrawSmoke(dt, now) {
       smokeCtx.beginPath();
       smokeCtx.arc(px, py, puffSize, 0, Math.PI * 2);
       smokeCtx.fill();
+
+      const fringe = Number.isFinite(state.glitchFringe)
+        ? Math.max(0, state.glitchFringe)
+        : 0;
+      if (state.glitchEnabled && fringe > 0) {
+        const redAlpha = puffAlpha * (rgb.r / 255) * 0.65;
+        const blueAlpha = puffAlpha * (rgb.b / 255) * 0.65;
+
+        if (redAlpha > 0.002) {
+          const redGradient = smokeCtx.createRadialGradient(
+            px - fringe, py, 0, px - fringe, py, puffSize
+          );
+          redGradient.addColorStop(0, `rgba(255,0,0,${redAlpha})`);
+          redGradient.addColorStop(0.6, `rgba(255,0,0,${redAlpha * 0.45})`);
+          redGradient.addColorStop(1, "rgba(255,0,0,0)");
+          smokeCtx.fillStyle = redGradient;
+          smokeCtx.beginPath();
+          smokeCtx.arc(px - fringe, py, puffSize, 0, Math.PI * 2);
+          smokeCtx.fill();
+        }
+
+        if (blueAlpha > 0.002) {
+          const blueGradient = smokeCtx.createRadialGradient(
+            px + fringe, py, 0, px + fringe, py, puffSize
+          );
+          blueGradient.addColorStop(0, `rgba(0,0,255,${blueAlpha})`);
+          blueGradient.addColorStop(0.6, `rgba(0,0,255,${blueAlpha * 0.45})`);
+          blueGradient.addColorStop(1, "rgba(0,0,255,0)");
+          smokeCtx.fillStyle = blueGradient;
+          smokeCtx.beginPath();
+          smokeCtx.arc(px + fringe, py, puffSize, 0, Math.PI * 2);
+          smokeCtx.fill();
+        }
+      }
     }
   }
+
+  applyPixelation();
 }
 
 // --- CROSSHAIR OVERLAY --------------------------------------------------------
@@ -410,6 +524,12 @@ function updateURL() {
   params.set("size", state.size);
   params.set("width", state.width);
   params.set("turbulence", state.turbulence);
+  params.set("pixelation", state.pixelationEnabled);
+  params.set("pixelSize", state.pixelCellSize);
+  params.set("glitch", state.glitchEnabled);
+  params.set("glitchIntensity", state.glitchIntensity);
+  params.set("glitchFrequency", state.glitchFrequency);
+  params.set("glitchFringe", state.glitchFringe);
   params.set("menu", state.settingsMode);
   params.set("side", state.side);
   history.replaceState({}, "", "?" + params.toString());
@@ -451,6 +571,18 @@ function syncInputs() {
 
   turbulenceSlider.value = state.turbulence;
   turbulenceValue.textContent = state.turbulence;
+
+  pixelCellSizeSlider.value = state.pixelCellSize;
+  pixelCellSizeValue.textContent = `${state.pixelCellSize}px`;
+
+  glitchIntensitySlider.value = state.glitchIntensity;
+  glitchIntensityValue.textContent = `${state.glitchIntensity}px`;
+
+  glitchFrequencySlider.value = state.glitchFrequency;
+  glitchFrequencyValue.textContent = `${state.glitchFrequency}Hz`;
+  glitchFringeSlider.value = state.glitchFringe;
+  glitchFringeValue.textContent = `${state.glitchFringe}px`;
+  syncEffectsEnabled();
 }
 
 flipSideButton.addEventListener("click", () => {
@@ -518,6 +650,42 @@ widthSlider.addEventListener("input", e => {
 
 turbulenceSlider.addEventListener("input", e => {
   state.turbulence = parseFloat(e.target.value);
+  syncInputs();
+  updateURL();
+});
+
+pixelationToggle.addEventListener("change", e => {
+  state.pixelationEnabled = e.target.checked;
+  syncEffectsEnabled();
+  updateURL();
+});
+
+pixelCellSizeSlider.addEventListener("input", e => {
+  state.pixelCellSize = parseFloat(e.target.value);
+  syncInputs();
+  updateURL();
+});
+
+glitchToggle.addEventListener("change", e => {
+  state.glitchEnabled = e.target.checked;
+  syncEffectsEnabled();
+  updateURL();
+});
+
+glitchIntensitySlider.addEventListener("input", e => {
+  state.glitchIntensity = parseFloat(e.target.value);
+  syncInputs();
+  updateURL();
+});
+
+glitchFrequencySlider.addEventListener("input", e => {
+  state.glitchFrequency = parseFloat(e.target.value);
+  syncInputs();
+  updateURL();
+});
+
+glitchFringeSlider.addEventListener("input", e => {
+  state.glitchFringe = parseFloat(e.target.value);
   syncInputs();
   updateURL();
 });
