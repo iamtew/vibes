@@ -37,17 +37,17 @@ body {
   z-index: 0;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.25s ease;
+  transition: opacity 500ms ease;
   background: transparent;
 }
 
-body.settings-mode #preview-backdrop {
+body.settings-mode.checkerboard-enabled #preview-backdrop {
   opacity: 1;
   background: var(--settings-pattern);
 }
 
 body.settings-mode {
-  background: var(--settings-pattern);
+  background: transparent;
 }
 
 #smoke-canvas {

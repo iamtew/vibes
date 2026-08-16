@@ -16,6 +16,7 @@ const defaults = {
   glitchIntensity: 0,
   glitchFrequency: 2,
   glitchFringe: 0,
+  checkerboardEnabled: false,
   settingsMode: "ON",
   side: "left" // which screen edge the settings controls live on
 };
@@ -51,6 +52,7 @@ let state = {
   glitchIntensity: getNumberParam("glitchIntensity", defaults.glitchIntensity),
   glitchFrequency: getNumberParam("glitchFrequency", defaults.glitchFrequency),
   glitchFringe: getNumberParam("glitchFringe", defaults.glitchFringe),
+  checkerboardEnabled: getBooleanParam("checkerboard", defaults.checkerboardEnabled),
   settingsMode: getParam("menu", defaults.settingsMode) === "DISABLE" ? "DISABLE" : "ON",
   side: getParam("side", defaults.side)
 };
@@ -68,6 +70,7 @@ const pixelCtx = pixelCanvas.getContext("2d");
 
 const settingsMenu = document.getElementById("settings-menu");
 const helpButton = document.getElementById("help-button");
+const checkerboardButton = document.getElementById("checkerboard-button");
 const flipSideButton = document.getElementById("flip-side-button");
 const closeSettingsButton = document.getElementById("close-menu-button");
 const helpOverlay = document.getElementById("help-overlay");
@@ -124,6 +127,12 @@ helpOverlay.addEventListener("click", event => {
 document.addEventListener("keydown", event => {
   if (event.key === "Escape" && !helpOverlay.hidden) closeHelpOverlay();
 });
+
+function applyCheckerboard() {
+  document.body.classList.toggle("checkerboard-enabled", state.checkerboardEnabled);
+  checkerboardButton.setAttribute("aria-pressed", String(state.checkerboardEnabled));
+  checkerboardButton.textContent = state.checkerboardEnabled ? "▞" : "▚";
+}
 
 function setOpenSection(section) {
   for (const toggle of sectionToggles) {
@@ -533,6 +542,7 @@ function updateURL() {
   params.set("glitchIntensity", state.glitchIntensity);
   params.set("glitchFrequency", state.glitchFrequency);
   params.set("glitchFringe", state.glitchFringe);
+  params.set("checkerboard", state.checkerboardEnabled);
   params.set("menu", state.settingsMode);
   params.set("side", state.side);
   history.replaceState({}, "", "?" + params.toString());
@@ -591,6 +601,12 @@ function syncInputs() {
 flipSideButton.addEventListener("click", () => {
   state.side = state.side === "left" ? "right" : "left";
   applySide();
+  updateURL();
+});
+
+checkerboardButton.addEventListener("click", () => {
+  state.checkerboardEnabled = !state.checkerboardEnabled;
+  applyCheckerboard();
   updateURL();
 });
 
@@ -706,6 +722,7 @@ resetButton.addEventListener("click", () => {
   syncInputs();
   applySettingsMode();
   applySide();
+  applyCheckerboard();
   updateURL();
 });
 
@@ -724,6 +741,7 @@ copyUrlObsButton.addEventListener("click", () => {
 syncInputs();
 applySettingsMode();
 applySide();
+applyCheckerboard();
 
 setTimeout(() => {
   startSpawn();
