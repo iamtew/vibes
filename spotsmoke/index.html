@@ -24,19 +24,8 @@
 
     <p class="hint">Double-click the background to set the smoke spot.</p>
 
-    <div class="settings-section" data-section="color">
-      <button id="color-toggle" class="setting-toggle" type="button" aria-expanded="false" aria-controls="color-controls" data-section-toggle>Smoke color <span id="color-toggle-icon" class="section-toggle-icon" aria-hidden="true">∇</span></button>
-      <div id="color-controls" class="section-panel" hidden>
-        <div id="color-picker" aria-label="Smoke color picker"></div>
-        <div class="row">
-          <input id="color-input" type="text" inputmode="text" maxlength="7" spellcheck="false" aria-label="Smoke color hex value" />
-          <button id="color-reset-button" class="small-button">Reset Color ඞ</button>
-        </div>
-      </div>
-    </div>
-
     <div class="settings-section" data-section="shape">
-      <button id="shape-toggle" class="setting-toggle" type="button" aria-expanded="true" aria-controls="shape-controls" data-section-toggle>Smoke shape <span id="shape-toggle-icon" class="section-toggle-icon" aria-hidden="true">∆</span></button>
+      <button id="shape-toggle" class="setting-toggle" type="button" aria-expanded="true" aria-controls="shape-controls" data-section-toggle><span id="shape-toggle-icon" class="section-toggle-icon" aria-hidden="true">⏷</span>Smoke shape</button>
       <div id="shape-controls" class="section-panel">
         <div class="setting-group">
           <div class="range-control">
@@ -112,8 +101,19 @@
       </div>
     </div>
 
+    <div class="settings-section" data-section="color">
+      <button id="color-toggle" class="setting-toggle" type="button" aria-expanded="false" aria-controls="color-controls" data-section-toggle><span id="color-toggle-icon" class="section-toggle-icon" aria-hidden="true">⏵</span>Smoke color</button>
+      <div id="color-controls" class="section-panel" hidden>
+        <div id="color-picker" aria-label="Smoke color picker"></div>
+        <div class="row">
+          <input id="color-input" type="text" inputmode="text" maxlength="7" spellcheck="false" aria-label="Smoke color hex value" />
+          <button id="color-reset-button" class="small-button">Reset Color ඞ</button>
+        </div>
+      </div>
+    </div>
+
     <div class="settings-section" data-section="effects">
-      <button id="effects-toggle" class="setting-toggle" type="button" aria-expanded="false" aria-controls="effects-controls" data-section-toggle>Effects <span id="effects-toggle-icon" class="section-toggle-icon" aria-hidden="true">∇</span></button>
+      <button id="effects-toggle" class="setting-toggle" type="button" aria-expanded="false" aria-controls="effects-controls" data-section-toggle><span id="effects-toggle-icon" class="section-toggle-icon" aria-hidden="true">⏵</span>Effects</button>
       <div id="effects-controls" class="section-panel" hidden>
         <div class="effect-control">
           <label class="switch-row">

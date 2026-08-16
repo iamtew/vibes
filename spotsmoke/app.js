@@ -130,7 +130,7 @@ function setOpenSection(section) {
     const panel = document.getElementById(toggle.getAttribute("aria-controls"));
     const isOpen = toggle.closest("[data-section]") === section;
     toggle.setAttribute("aria-expanded", String(isOpen));
-    toggle.querySelector(".section-toggle-icon").textContent = isOpen ? "∆" : "∇";
+    toggle.querySelector(".section-toggle-icon").textContent = isOpen ? "⏷" : "⏵";
     panel.hidden = !isOpen;
   }
 }
