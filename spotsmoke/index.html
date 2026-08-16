@@ -16,6 +16,7 @@
     <div class="menu-header">
       <h2>Spot Smoke Settings</h2>
       <div class="menu-header-buttons">
+        <button id="help-button" aria-label="Show setup guide" aria-haspopup="dialog">?</button>
         <button id="flip-side-button" aria-label="Move menu to other side">⇄</button>
         <button id="close-menu-button" aria-label="Close settings">✕</button>
       </div>
@@ -101,6 +102,11 @@
       <button id="copy-url-button" class="small-button">Copy URL</button>
       <button id="copy-url-obs-button" class="small-button">Copy URL for OBS</button>
     </div>
+  </div>
+
+  <div id="help-overlay" role="dialog" aria-modal="true" aria-label="Spot Smoke setup guide" hidden>
+    <button id="help-close-button" aria-label="Close setup guide">✕</button>
+    <img id="help-image" src="spotsmoke-howto.jpg" alt="Spot Smoke setup guide" />
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@jaames/iro@5"></script>

@@ -42,8 +42,11 @@ const overlayCanvas = document.getElementById("overlay-canvas");
 const overlayCtx = overlayCanvas.getContext("2d");
 
 const settingsMenu = document.getElementById("settings-menu");
+const helpButton = document.getElementById("help-button");
 const flipSideButton = document.getElementById("flip-side-button");
 const closeSettingsButton = document.getElementById("close-menu-button");
+const helpOverlay = document.getElementById("help-overlay");
+const helpCloseButton = document.getElementById("help-close-button");
 
 const durationSlider = document.getElementById("duration-slider");
 const durationValue = document.getElementById("duration-value");
@@ -65,6 +68,27 @@ const testButton = document.getElementById("test-button");
 const resetButton = document.getElementById("reset-button");
 const copyUrlButton = document.getElementById("copy-url-button");
 const copyUrlObsButton = document.getElementById("copy-url-obs-button");
+
+function closeHelpOverlay() {
+  helpOverlay.hidden = true;
+  helpOverlay.classList.remove("zoomed");
+  helpButton.focus();
+}
+
+helpButton.addEventListener("click", () => {
+  helpOverlay.hidden = false;
+});
+
+helpCloseButton.addEventListener("click", closeHelpOverlay);
+
+helpOverlay.addEventListener("click", event => {
+  if (event.target === helpCloseButton) return;
+  helpOverlay.classList.toggle("zoomed");
+});
+
+document.addEventListener("keydown", event => {
+  if (event.key === "Escape" && !helpOverlay.hidden) closeHelpOverlay();
+});
 
 colorToggle.addEventListener("click", () => {
   colorControls.hidden = !colorControls.hidden;
