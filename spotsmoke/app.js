@@ -273,6 +273,8 @@ function spawnParticle() {
   const spot = spotPx();
   const spread = state.width * state.size;
   const turb = state.turbulence / 100;
+  const exposureRoll = Math.random();
+  const exposure = exposureRoll < 0.6 ? 1 : exposureRoll < 0.85 ? 0.72 : 0.45;
 
   // each particle is a small cluster of puffs, giving the cloud a mottled, billowy texture
   const puffCount = 3 + Math.floor(Math.random() * 3);
@@ -299,6 +301,7 @@ function spawnParticle() {
     maxSize: (30 + state.width * 0.25 + Math.random() * 20) * state.size,
     rotationSpeed: (Math.random() - 0.5) * 1.2 * (0.3 + turb),
     puffs,
+    exposure,
     age: 0,
     life: state.lifetime * (0.7 + Math.random() * 0.6)
   });
@@ -338,7 +341,7 @@ function updateAndDrawSmoke(dt, now) {
 
     const fadeIn = Math.min(t / 0.15, 1);
     const fadeOut = Math.min((1 - t) / 0.4, 1);
-    const alpha = Math.max(0, Math.min(fadeIn, fadeOut)) * baseAlpha;
+    const alpha = Math.max(0, Math.min(fadeIn, fadeOut)) * baseAlpha * p.exposure;
 
     if (alpha <= 0.002) continue;
 
