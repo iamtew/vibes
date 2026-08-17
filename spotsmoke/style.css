@@ -1,7 +1,7 @@
 @import url('https://fonts.cdnfonts.com/css/better-vcr');
 
 :root {
-  --settings-bg: rgba(10, 10, 20, 0.9);
+  --settings-bg: rgba(10, 10, 20, 0.95);
   --settings-border: rgba(255, 255, 255, 0.15);
   --settings-text: #f5f5f5;
   --accent: #0ff;
